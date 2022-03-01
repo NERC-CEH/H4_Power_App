@@ -24,6 +24,7 @@ function(input, output, session) {
 		
 	})
   
+	noind.yr.nm <- reactive({return(as.numeric(unlist(strsplit(input$noind.yr,",")))) })
 	
 	#define the length of the time series by adding the historical data length to the number of years
 	yrdef <- reactive({ 
@@ -40,57 +41,146 @@ function(input, output, session) {
 
 
 	#Calculate the total number of sites using the number of sites per year, number of years and the sampling frequency
-	nosite.r <- eventReactive(input$update,{
+	#nosite.r <- eventReactive(input$update,{
+	nosite.r <- reactive({		
+	
+			i.nosite.yr <- as.numeric(unlist(strsplit(input$nosite.yr,",")))
+			smfreq <- as.numeric(unlist(strsplit(input$samfreq,",")))
 			i.noyear <- yrdef()[1]
 			
 			if(i.noyear<0){i.noyear <- abs(i.noyear)}
 			
 			if(check.input()<=1){
+			
+			if(input$deschg){
+				nosite = max(i.nosite.yr) * max(smfreq)
+			}else{	
 				if(i.noyear >= input$samfreq){
-					nosite = input$nosite.yr * input$samfreq
+					nosite = i.nosite.yr * smfreq
 				}else{
 					isamfreq <- i.noyear
-					nosite = input$nosite.yr * isamfreq 
+					nosite = i.nosite.yr * isamfreq 
 				} 
-				nosite
+				
+			}
+			nosite
 			}
 	})
 
+	
 	#specify the structure of the simulated data in terms of unique site and sample identifiers and year 
 	selectData <- eventReactive(input$update,{
-	
+	#selectData <- reactive({
 		if(check.input()<=1){
 			
 			i.noyear <- yrdef()[1]
 			
-			nosite <- nosite.r()
+			chg.tm <- as.numeric(unlist(strsplit(input$deschg.yr,",")))
+			i.nosite.yr <- as.numeric(unlist(strsplit(input$nosite.yr,",")))
+			smfreq <- as.numeric(unlist(strsplit(input$samfreq,",")))
+			rept <- as.numeric(unlist(strsplit(input$noreps,",")))
+			 
+				if(input$deschg){
+	
+					tps <- diff(c(0,chg.tm,i.noyear))
+					nositemx = max(i.nosite.yr) * max(smfreq)
+					#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
+					thin.id=c()
+					for(ks in 1:(length(chg.tm)+1)){
+						nositep = i.nosite.yr[ks] * smfreq[ks] 
+						if(ks==1){
+							thin.id <- c(thin.id,paste(rep(1:nositep,floor(tps[ks]/smfreq[ks])),rep((1:tps[ks]),each=floor(nositep/smfreq[ks])),sep="_"))
+						}else{
+							thin.id <- c(thin.id,paste(rep(1:nositep,floor(tps[ks]/smfreq[ks])),rep(tps[(ks-1)]+(1:tps[ks]),each=floor(nositep/smfreq[ks])),sep="_"))
+						}
+					}
+				}else{
+				
+					nositemx <- nosite.r()
+					#nosite <- nosite.r()
+					thin.id <- paste(rep(1:nositemx,floor(i.noyear/smfreq)),rep(1:i.noyear,each=floor(nositemx/smfreq)),sep="_")
+				}
+				#create data frame representing exhasistive set of all reps and all sites in all years  
+				data0 <- expand.grid(reps=1:max(rept), site=1:nositemx, year=1:i.noyear)
+			  
+				#define a unique identifier for sites in particular years
+				data0$site.yr <- paste(data0$site, data0$year, sep="_")
+				
+				#thin the full data set to conform to sampling frequency under investigation
+				data0 <- data0[is.element(data0$site.yr,thin.id),]
+
+				#convert all identifiers to factors
+				data0$site <- as.factor(data0$site)
+				data0$reps <- as.factor(data0$reps)
+				data0$site_and_reps = interaction(data0$site,data0$reps)
+				data0$year_and_reps = interaction(data0$year,data0$reps)
+				
+				if(length(rept)>1){
+					#if(length(rept)!=(length(chg.tm)+1)){
+					#	stop("The length of repeat visits must be one more than the number of change points")
+					#}else{
+					tpid=c()
+					for(rpi in 1:length(rept)){
+						if(rpi==1){
+							tpid=c(tpid,apply(expand.grid(1:chg.tm[rpi], 1:rept[rpi]), 1, paste, collapse="."))
+						}else{
+							if(rpi==length(rept)){
+									tpid=c(tpid,apply(expand.grid((1+chg.tm[rpi-1]):i.noyear, 1:rept[rpi]), 1, paste, collapse="."))
+								}else{
+									tpid=c(tpid,apply(expand.grid((1+chg.tm[rpi-1]):chg.tm[rpi], 1:rept[rpi]), 1, paste, collapse="."))
+								}
+							#}
+				
+						}
+					}
+					data0 <- data0[is.element(data0$year_and_reps,tpid),]
+				}
+				data0$year1 <- data0$year-1
+
+				data0
 			
-			#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
-			thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
+			}
+			})
 			
-			#create data frame representing exhasistive set of all reps and all sites in all years  
-			data0 <- expand.grid(reps=1:input$noreps, site=1:nosite, year=1:i.noyear)
+	
+	
+	# selectData <- eventReactive(input$update,{
+	
+		# if(check.input()<=1){
+			
+			# i.noyear <- yrdef()[1]
+			
+			# nosite <- nosite.r()
+			
+			# #establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
+			# thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
+			
+			# #create data frame representing exhasistive set of all reps and all sites in all years  
+			# data0 <- expand.grid(reps=1:input$noreps, site=1:nosite, year=1:i.noyear)
 		  
-			#define a unique identifier for sites in particular years
-			data0$site.yr <- paste(data0$site, data0$year, sep="_")
+			# #define a unique identifier for sites in particular years
+			# data0$site.yr <- paste(data0$site, data0$year, sep="_")
 			
-			#thin the full data set to conform to sampling frequency under investigation
-			data0 <- data0[is.element(data0$site.yr,thin.id),]
+			# #thin the full data set to conform to sampling frequency under investigation
+			# data0 <- data0[is.element(data0$site.yr,thin.id),]
 
-			#convert all identifiers to factors
-			data0$site <- as.factor(data0$site)
-			data0$reps <- as.factor(data0$reps)
-			data0$site_and_reps = interaction(data0$site,data0$reps)
-			data0$year1 <- data0$year-1
+			# #convert all identifiers to factors
+			# data0$site <- as.factor(data0$site)
+			# data0$reps <- as.factor(data0$reps)
+			# data0$site_and_reps = interaction(data0$site,data0$reps)
+			# data0$year1 <- data0$year-1
 
-			data0#[,1:2]
-		}
-	})
+			# data0#[,1:2]
+		# }
+	# })
 
 	#simulate data according to the design and distribution specified	
-	sim.data <- eventReactive(input$update,{
-
+	#sim.data <- eventReactive(input$update,{
+	sim.data <- reactive({
+		
 		if(check.input()<=1){
+			
+			prv <- paramvals()
 			
 			i.noyear <- yrdef()[1]
 			data0 <- selectData()
@@ -98,9 +188,9 @@ function(input, output, session) {
 			nosite <- nosite.r()
 			
 				#SD of the site-specific intercept
-				SD <- input$var1	
+				SD <- prv$var1	
 				#Mean of the site-specific intercept
-				k <- input$var2   
+				k <- prv$var2   
 
 				#site-specific intercept
 				int1 <- rnorm(nosite,k,SD)
@@ -112,27 +202,29 @@ function(input, output, session) {
 				#adding plot-specific variation for each plot
 				data0$rep_v <- data0$site_and_reps
 				
-				levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,input$var3))
+				levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,prv$var3))
 				data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
 
 				#simulating the response
 
-				data0$response <- rnorm(dim(data0)[1], mean = data0$int+input$tslope*data0$year1, sd = input$var4)
+				data0$response <- rnorm(dim(data0)[1], mean = data0$int+input$tslope*data0$year1, sd = prv$var4)
 
-			data0
-		
+				data0
+			
 		}
 	})
  
  
  	#simulate data according to the design and distribution specified for the data from individuals		
 	simdata.ind <- eventReactive(input$updateind,{	
-
+		
+		
+		
 		i.noyear.ind <- input$noyear.ind + input$hist.yrind
 		
-		totno.ind=input$noind.yr*(i.noyear.ind/input$rep.ind)
+		totno.ind=noind.yr.nm()*(i.noyear.ind/input$rep.ind)
 
-		data0 <- expand.grid(ind=1:input$noind.yr, year=seq(1,i.noyear.ind,by=input$rep.ind))	
+		data0 <- expand.grid(ind=1:noind.yr.nm(), year=seq(1,i.noyear.ind,by=input$rep.ind))	
 		data0$ind.yr <- paste(data0$ind, data0$year, sep="_")		
 		data0$ind <- as.factor(data0$ind)
 
@@ -162,6 +254,8 @@ function(input, output, session) {
 		
 		if(check.input()<=1){
 					
+			prv <- paramvals()
+			
 			pval=numeric(input$nsims)
 
 			for(isim in 1:input$nsims){
@@ -173,9 +267,9 @@ function(input, output, session) {
 				nosite <- nosite.r()
 				
 				#SD of the site-specific intercept
-				SD <- input$var1	
+				SD <- prv$var1	
 				#Mean of the site-specific intercept
-				k <- input$var2   
+				k <- prv$var2   
 
 				#site-specific intercept
 				int1 <- rnorm(nosite,k,SD)
@@ -187,11 +281,11 @@ function(input, output, session) {
 				#adding plot-specific variation for each plot
 				data0$rep_v <- data0$site_and_reps
 		
-				levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,input$var3))
+				levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,prv$var3))
 				data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
 
 				#simulating the response
-				data0$response <- rnorm(dim(data0)[1], mean = data0$int+input$tslope*data0$year1, sd = input$var4)
+				data0$response <- rnorm(dim(data0)[1], mean = data0$int+input$tslope*data0$year1, sd = prv$var4)
 
 
 				#### model data ####	 
@@ -211,6 +305,8 @@ function(input, output, session) {
 	#run the power analysis for site based data by simulating multiple data sets under the multiple year scenerio specified
    run.mult.scen <- eventReactive(input$update,{
 			if(check.input()>0){	
+			
+			prv <- paramvals()
 			
 			mult.pval=matrix(ncol=input$nsims,nrow=5)
 			
@@ -254,9 +350,9 @@ function(input, output, session) {
 
 					
 					#SD of the site-specific intercept
-					SD <- input$var1	
+					SD <- prv$var1	
 					#Mean of the site-specific intercept
-					k <- input$var2   
+					k <- prv$var2   
 
 					#site-specific intercept
 					int1 <- rnorm(nosite,k,SD)
@@ -267,12 +363,12 @@ function(input, output, session) {
 
 					#adding plot-specific variation for each plot
 					data0$rep_v <- data0$site_and_reps
-					levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,input$var3))
+					levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,prv$var3))
 					data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
 
 					#simulating the response
 
-					data0$response <- rnorm(dim(data0)[1], mean = data0$int+input$tslope*data0$year1, sd = input$var4)
+					data0$response <- rnorm(dim(data0)[1], mean = data0$int+input$tslope*data0$year1, sd = prv$var4)
 
 
 					#### model data ####
@@ -295,6 +391,7 @@ function(input, output, session) {
    run.mult.st.scen <- eventReactive(input$update,{
    
 			if(check.input()>0){	
+			prv <- paramvals()
 			
 			#define matrix to store p values in
 			mult.pval=matrix(ncol=input$nsims,nrow=5)
@@ -338,9 +435,9 @@ function(input, output, session) {
 					for(isim in 1:input$nsims){
 
 						#SD of the site-specific intercept
-						SD <- input$var1	
+						SD <- prv$var1	
 						#Mean of the site-specific intercept
-						k <- input$var2  
+						k <- prv$var2  
 
 						#site-specific intercept
 						int1 <- rnorm(nosite,k,SD)
@@ -351,11 +448,11 @@ function(input, output, session) {
 
 						#adding plot-specific variation for each plot
 						data0$rep_v <- data0$site_and_reps
-						levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,input$var3))
+						levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,prv$var3))
 						data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
 
 						#simulating the response
-						data0$response <- rnorm(dim(data0)[1], mean = data0$int+input$tslope*data0$year1, sd = input$var4)
+						data0$response <- rnorm(dim(data0)[1], mean = data0$int+input$tslope*data0$year1, sd = prv$var4)
 						
 						#### model data ####
 						mod.boot <- lme(response~year,random=~1|site/reps,data=data0,na.action=na.omit)
@@ -377,7 +474,9 @@ function(input, output, session) {
  	run.mult.eff.scen <- eventReactive(input$update,{
 			
 			if(check.input()>0){	
-			
+				
+				prv <- paramvals()
+				
 				#define matrix to store p values in
 				mult.pval=matrix(ncol=input$nsims,nrow=5)
 				
@@ -418,9 +517,9 @@ function(input, output, session) {
 					for(isim in 1:input$nsims){
 						
 						#SD of the site-specific intercept
-						SD <- input$var1	
+						SD <- prv$var1	
 						#Mean of the site-specific intercept
-						k <- input$var2  
+						k <- prv$var2  
 
 						#site-specific intercept
 						int1 <- rnorm(nosite,k,SD)
@@ -431,11 +530,11 @@ function(input, output, session) {
 
 						#adding plot-specific variation for each plot
 						data0$rep_v <- data0$site_and_reps
-						levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,input$var3))
+						levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,prv$var3))
 						data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
 
 						#simulating the response
-						data0$response <- rnorm(dim(data0)[1], mean = data0$int+ef.rng[ik]*data0$year1, sd = input$var4)
+						data0$response <- rnorm(dim(data0)[1], mean = data0$int+ef.rng[ik]*data0$year1, sd = prv$var4)
 
 						#### model data ####			 
 						mod.boot <- lme(response~year,random=~1|site/reps,data=data0,na.action=na.omit)
@@ -460,9 +559,9 @@ function(input, output, session) {
 
 		i.noyear.ind <- input$noyear.ind + input$hist.yrind
 		
-		totno.ind=input$noind.yr*(i.noyear.ind/input$rep.ind)
+		totno.ind=noind.yr.nm()*(i.noyear.ind/input$rep.ind)
 
-		data0 <- expand.grid(ind=1:input$noind.yr, year=seq(1,i.noyear.ind,by=input$rep.ind))	
+		data0 <- expand.grid(ind=1:noind.yr.nm(), year=seq(1,i.noyear.ind,by=input$rep.ind))	
 		data0$ind.yr <- paste(data0$ind, data0$year, sep="_")		
 		data0$ind <- as.factor(data0$ind)
 
@@ -506,9 +605,9 @@ function(input, output, session) {
 		
 		i.noyear.ind <- input$noyear.ind + input$hist.yrind
 		
-		totno.ind=input$noind.yr*input$noyear.ind
+		totno.ind=noind.yr.nm()*input$noyear.ind
 
-		data0 <- expand.grid(ind=1:input$noind.yr, year=1:i.noyear.ind)	
+		data0 <- expand.grid(ind=1:noind.yr.nm(), year=1:i.noyear.ind)	
 		data0$ind.yr <- paste(data0$ind, data0$year, sep="_")		
 		data0$ind <- as.factor(data0$ind)
 
@@ -597,9 +696,9 @@ function(input, output, session) {
 	
 		for(ijk in 1:length(yr.rngi)){
 		
-			totno.ind=input$noind.yr*yr.rngi[ijk]
+			totno.ind=noind.yr.nm()*yr.rngi[ijk]
 
-			data0 <- expand.grid(ind=1:input$noind.yr, year=1:yr.rngi[ijk])	
+			data0 <- expand.grid(ind=1:noind.yr.nm(), year=1:yr.rngi[ijk])	
 			data0$ind.yr <- paste(data0$ind, data0$year, sep="_")		
 			data0$ind <- as.factor(data0$ind)
 
@@ -772,7 +871,7 @@ function(input, output, session) {
 	####################
 	
 	
-	output$test <- renderPrint({check.input()})
+	output$test <- renderPrint({paramvals()})
 	output$test2 <- renderPrint({yrdef()})
 
 	output$test.ind <- renderPrint({run.ind.scen()})
@@ -817,14 +916,21 @@ function(input, output, session) {
 					conditionalPanel("input.hist==true",
 							sliderInput("hist.yr", label = "No. of years of legacy data", min = 0, max = 10, value = c(0),ticks=FALSE)  
 						),
-					numericInput('nosite.yr', 'No. of sites per Year',10,min=2,max=100,step=1),
+					checkboxInput("deschg", label = "Include change in design", value = FALSE),		  
+					conditionalPanel("input.deschg==true",
+							textInput('deschg.yr', 'Years in which change occurs (comma delimited)', "0")  
+						),
+					textInput('nosite.yr', 'No. of sites per Year', "10"),
+					#numericInput('nosite.yr', 'No. of sites per Year',10,min=2,max=100,step=1),
 					checkboxInput("mult_st", label = "Multiple Site Scenarios", value = FALSE),		  
 					conditionalPanel("input.mult_st==true",
 							sliderInput("nosite.st.rng", label = "No. of Sites Scenario Range", min = 2, max = 100, value = c(5,25),ticks=FALSE)  
 						),  
 					 
-					numericInput('noreps', 'No. of within site replicates per year',3,min=1,max=25,step=1),
-					numericInput('samfreq', 'How often sites are repeated (years)',input$samfreq_intro,min=1,max=10,step=1),
+					textInput('noreps', 'No. of within site replicates per year', "3"),
+					#numericInput('noreps', 'No. of within site replicates per year',3,min=1,max=25,step=1),
+					textInput('samfreq', 'How often sites are repeated (years)', "1"),
+					#numericInput('samfreq', 'How often sites are repeated (years)',input$samfreq_intro,min=1,max=10,step=1),
 					numericInput('tslope', 'Year on year change', input$tslope_intro, min = 0, max = 0.25,step=0.01),
 					checkboxInput("mult_ef", label = "Multiple change scenarios", value = FALSE),		  
 					conditionalPanel("input.mult_ef==true",
@@ -848,7 +954,12 @@ function(input, output, session) {
 						conditionalPanel("input.histind==true",
 							sliderInput("hist.yrind", label = "No. of years of legacy data", min = 0, max = 10, value = c(0),ticks=FALSE)  
 						),
-						numericInput('noind.yr', 'No. of Individuals per Year',10,min=2,max=200,step=10),
+						checkboxInput("deschg_ind", label = "Include change in design", value = FALSE),		  
+						conditionalPanel("input.deschg_ind==true",
+							textInput('deschg_ind.yr', 'Years in which change occurs (comma delimited)', "1,5,10")  
+						),
+						#numericInput('noind.yr', 'No. of Individuals per Year',10,min=2,max=200,step=10),
+						textInput('noind.yr', 'No. of Individuals per Year (comma delimited)', "10"),
 						checkboxInput("noind_ind", label = "Multiple Individual Scenarios", value = FALSE),		  
 						conditionalPanel("input.noind_ind==true",
 							sliderInput("ind.rng.ind", label = "No. of Individuals Range", min = 10, max = 250, value = c(10,100),ticks=FALSE)  
@@ -876,7 +987,29 @@ function(input, output, session) {
 						)
 						
 				})
-				
+	
+
+	paramvals <- reactive({
+	
+		outpar <- list()
+		if(input$presets=='fish'){
+			outpar$var1=1.5 ; outpar$var2=1 ; outpar$var3=0.25 ; outpar$var4=0.5 ;
+		}else{
+			if(input$presets=='honey'){
+				outpar$var1=1.75 ; outpar$var2=0.91 ; outpar$var3=0.15 ; outpar$var4=0.2 ;
+			}else{
+				if(input$presets=='lead'){
+					outpar$var1=2 ; outpar$var2=1.23 ; outpar$var3=0.35 ; outpar$var4=0.8 ;
+				}
+			}
+		}
+		if(input$param_spec=='val'){
+			outpar$var1=input$var1 ; outpar$var2=input$var2 ; outpar$var3=input$var3 ; outpar$var4=input$var4 ;
+		}
+		outpar
+		
+	})
+	
 	#define dynamic parameter inputs for data distributions for individual observation data	
 	output$resetable_inputpind <- renderUI({
 						times <- input$reset_inputpind
@@ -889,17 +1022,23 @@ function(input, output, session) {
 				})
 
 
-				
+	################################################################
+	######
+	####   output tables
+	####
+	##########################################
+	
 	### table of parameters and power that can be appended for site-based data
+	
 	dtp <- reactiveValues()
-	dtp$df <- data.frame(No.Year= numeric(0),No.Legacy.Years= numeric(0),No.Sites= numeric(0),No.Reps= numeric(0),RepeatFreq= numeric(0),Change= numeric(0),Power= numeric(0))
+	dtp$df <- data.frame(No.Year= numeric(0),No.Legacy.Years= numeric(0),Year.of.Change=numeric(0),No.Sites= numeric(0),No.Reps= numeric(0),RepeatFreq= numeric(0),Change= numeric(0),Power= numeric(0))
 	
 	newEntry <- observe({
 
 		pvl=run.scen()
 		pvl=round(100*(length(pvl[pvl<0.05])/length(pvl)))
 		
-		isolate(dtp$df[nrow(dtp$df) + 1,] <- c(input$noyear,input$hist.yr,input$nosite.yr,input$noreps,input$samfreq,input$tslope,pvl))
+		isolate(dtp$df[nrow(dtp$df) + 1,] <- c(input$noyear,input$hist.yr,input$deschg.yr,input$nosite.yr,input$noreps,input$samfreq,input$tslope,pvl))
 
 	})
 	
@@ -915,7 +1054,7 @@ function(input, output, session) {
 		pvl=run.ind.scen()
 		pvl=round(pvl)
 		
-		isolate(dtpind$df[nrow(dtpind$df) + 1,] <- c(input$noyear.ind,input$hist.yrind,input$noind.yr,input$rep.ind,input$tslope.ind,pvl))
+		isolate(dtpind$df[nrow(dtpind$df) + 1,] <- c(input$noyear.ind,input$hist.yrind,noind.yr.nm(),input$rep.ind,input$tslope.ind,pvl))
 
 	})
 	
