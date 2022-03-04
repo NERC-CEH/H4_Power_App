@@ -1,6 +1,7 @@
 #load all libraries required
 library(shiny)
 library(nlme)
+library(shinydashboard)
 
 ## all code sits within a function of inputs and outputs 
 function(input, output, session) {
@@ -1021,7 +1022,11 @@ function(input, output, session) {
 						
 				})
 
-
+	observeEvent(input$show, {
+    showModal(modalDialog(title = "Set scenario",
+                          HTML('<iframe width="560" height="315" src="https://www.youtube.com/embed/60FWIU4sgCU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>')                   
+                         ))
+		})
 	################################################################
 	######
 	####   output tables

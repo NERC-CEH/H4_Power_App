@@ -1,4 +1,5 @@
 library(shiny)
+library(shinydashboard)
 
 shinyUI(
 
@@ -131,10 +132,12 @@ shinyUI(
 			  sidebarPanel(
 				  
 				  h1("Define Scenario"),
+					actionButton("show", "",icon = icon("info")), 
 						uiOutput('resetable_input'),
 						
-						actionButton("update", "Update Analysis"),
-						actionButton("reset_input", "Reset inputs"),
+						actionButton("update", "Update Analysis",icon = icon("calendar")),
+						actionButton("reset_input", "Reset inputs",icon = icon("redo")),
+			
 						
 				  h1("Input Parameters"),
 						radioButtons("param_spec", label = "How to specify input parameters?", 
