@@ -3,6 +3,37 @@ library(shiny)
 library(nlme)
 library(shinydashboard)
 
+sim_data_ind <- function(data0, SD, k, tslope.ind, var3ind){
+  #individual means
+  data0$int <- rnorm(dim(data0)[1],k,SD)
+  
+  #simulating the response
+  data0$response <- rnorm(dim(data0)[1], mean = data0$int+(tslope.ind*data0$year1), sd = var3ind) 
+  
+  return(data0)
+}
+
+sim_data <- function(data0, nosite, SD, k, var3, tslope, var4){
+  #site-specific intercept
+  int1 <- rnorm(nosite,k,SD)
+  int.df <- data.frame(int = int1, site = c(1:nosite))
+  
+  #including the site-specific intercept to the main data set
+  data0$int <- int.df$int[match(data0$site, int.df$site)]
+  
+  #adding plot-specific variation for each plot
+  data0$rep_v <- data0$site_and_reps
+  
+  levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,var3))
+  data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
+  
+  #simulating the response
+  
+  data0$response <- rnorm(dim(data0)[1], mean = data0$int+tslope*data0$year1, sd = var4)
+  
+  data0
+}
+
 ## all code sits within a function of inputs and outputs 
 function(input, output, session) {
 
@@ -191,30 +222,7 @@ function(input, output, session) {
 			
 			nosite <- nosite.r()
 			
-				#SD of the site-specific intercept
-				SD <- prv$var1	
-				#Mean of the site-specific intercept
-				k <- prv$var2   
-
-				#site-specific intercept
-				int1 <- rnorm(nosite,k,SD)
-				int.df <- data.frame(int = int1, site = c(1:nosite))
-
-				#including the site-specific intercept to the main data set
-				data0$int <- int.df$int[match(data0$site, int.df$site)]
-
-				#adding plot-specific variation for each plot
-				data0$rep_v <- data0$site_and_reps
-				
-				levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,prv$var3))
-				data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
-
-				#simulating the response
-
-				data0$response <- rnorm(dim(data0)[1], mean = data0$int+input$tslope*data0$year1, sd = prv$var4)
-
-				data0
-			
+			sim_data(data0, nosite, prv$var1, prv$var2, prv$var3, input$tslope, prv$var4)
 		}
 	})
  
@@ -235,16 +243,8 @@ function(input, output, session) {
 		data0$year1 <- data0$year-1	
 		
 	
-		#SD of the between individual responses
-		SD <- input$var1ind 
-		#Mean of the individuals' values
-		k <- input$var2ind 
-
-		#individual means
-		data0$int <- rnorm(dim(data0)[1],k,SD)
-
-		#simulating the response
-		data0$response <- rnorm(dim(data0)[1], mean = data0$int+(input$tslope.ind*data0$year1), sd = input$var3ind) 
+		data0 <- sim_data_ind(data0, input$var1ind, input$var2ind, 
+		                      input$tslope.ind, input$var3ind)
 		
 		return(data0)
 	
@@ -257,50 +257,27 @@ function(input, output, session) {
 	run.scen <- eventReactive(input$update,{
 		
 		if(check.input()<=1){
-					
-			prv <- paramvals()
-			
-			pval=numeric(input$nsims)
-
-			for(isim in 1:input$nsims){
-
+		  prv <- paramvals()
+		  
+			pval <- replicate(input$nsims, {
+			  
 				### simulate data #####
 				  
 				data0 <- selectData()
 			
 				nosite <- nosite.r()
 				
-				#SD of the site-specific intercept
-				SD <- prv$var1	
-				#Mean of the site-specific intercept
-				k <- prv$var2   
-
-				#site-specific intercept
-				int1 <- rnorm(nosite,k,SD)
-				int.df <- data.frame(int = int1, site = c(1:nosite))
-
-				#including the site-specific intercept to the main data set
-				data0$int <- int.df$int[match(data0$site, int.df$site)]
-
-				#adding plot-specific variation for each plot
-				data0$rep_v <- data0$site_and_reps
-		
-				levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,prv$var3))
-				data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
-
-				#simulating the response
-				data0$response <- rnorm(dim(data0)[1], mean = data0$int+input$tslope*data0$year1, sd = prv$var4)
-
+				data0 <- sim_data(data0, nosite = nosite, SD = prv$var1, k = prv$var2, 
+				                  var3 = prv$var3, tslope = input$tslope, var4 = prv$var4)
 
 				#### model data ####	 
 				mod.boot <- lme(response~year,random=~1|site/reps,data=data0,na.action=na.omit)
 				#store the p value corresponding to the estimated trend
-				pval[isim] <- summary(mod.boot)$tTable[2,5]
+				summary(mod.boot)$tTable[2,5]
 				
 
+			})
 
-			} 
-			
 			return(pval)
 			
 		}
@@ -343,8 +320,14 @@ function(input, output, session) {
 					# nosite = input$nosite.yr * input$samfreq 
 				# } 
 					
+
 				# #establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
 				# thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
+
+				#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
+				thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),
+				                 rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
+
 				
 				# #create data frame representing exhasistive set of all reps and all sites in all years 					
 				# data0 <- expand.grid(reps=1:input$noreps, site=1:nosite, year=1:i.noyear)
@@ -418,39 +401,18 @@ function(input, output, session) {
 
 					nosite <- nosite.r()
 					
-				for(isim in 1:input$nsims){
-
-					
-					#SD of the site-specific intercept
-					SD <- prv$var1	
-					#Mean of the site-specific intercept
-					k <- prv$var2   
-
-					#site-specific intercept
-					int1 <- rnorm(nosite,k,SD)
-					int.df <- data.frame(int = int1, site = c(1:nosite))
-
-					#including the site-specific intercept to the main data set
-					data0$int <- int.df$int[match(data0$site, int.df$site)]
-
-					#adding plot-specific variation for each plot
-					data0$rep_v <- data0$site_and_reps
-					levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,prv$var3))
-					data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
-
-					#simulating the response
-
-					data0$response <- rnorm(dim(data0)[1], mean = data0$int+input$tslope*data0$year1, sd = prv$var4)
-
+				mult.pval[ik,] <- replicate(input$nsims,{
+					data0 <- sim_data(data0, nosite, prv$var1, prv$var2, prv$var3, 
+					                  input$tslope, prv$var4)
 
 					#### model data ####
 					mod.boot <- lme(response~year,random=~1|site/reps,data=data0,na.action=na.omit)
 					#store the p value corresponding to the estimated trend
-					mult.pval[ik,isim] <- summary(mod.boot)$tTable[2,5]
+					summary(mod.boot)$tTable[2,5]
 					
 
 
-				} 
+				})
 			
 			}
 			
@@ -471,12 +433,12 @@ function(input, output, session) {
 			#define a sequence covering the range of sites of interest
 			st.rng <- round(seq(input$nosite.st.rng[1],input$nosite.st.rng[2],len=5))
 			
-			
+			i.noyear <- input$noyear  + input$hist.yr
+					
 			for(ij in 1:length(st.rng)){
 
 					### simulate data #####
 					  
-					i.noyear <- input$noyear  + input$hist.yr
 					i.nosite.yr <- st.rng[ij]
 				
 					if(i.noyear >= input$samfreq){
@@ -487,7 +449,8 @@ function(input, output, session) {
 					} 
 							
 					#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
-					thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
+					thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),
+					                 rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
 					
 					#create data frame representing exhasistive set of all reps and all sites in all years 					
 					data0 <- expand.grid(reps=1:input$noreps, site=1:nosite, year=1:i.noyear)
@@ -504,35 +467,18 @@ function(input, output, session) {
 					data0$year1 <- data0$year-1
 					
 					
-					for(isim in 1:input$nsims){
+					mult.pval[ij,] <- replicate(input$nsims,{
 
-						#SD of the site-specific intercept
-						SD <- prv$var1	
-						#Mean of the site-specific intercept
-						k <- prv$var2  
-
-						#site-specific intercept
-						int1 <- rnorm(nosite,k,SD)
-						int.df <- data.frame(int = int1, site = c(1:nosite))
-
-						#including the site-specific intercept to the main data set
-						data0$int <- int.df$int[match(data0$site, int.df$site)]
-
-						#adding plot-specific variation for each plot
-						data0$rep_v <- data0$site_and_reps
-						levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,prv$var3))
-						data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
-
-						#simulating the response
-						data0$response <- rnorm(dim(data0)[1], mean = data0$int+input$tslope*data0$year1, sd = prv$var4)
-						
+						data0 <- sim_data(data0, nosite, prv$var1, prv$var2, prv$var3, 
+						                  input$tslope, prv$var4)
+					
 						#### model data ####
 						mod.boot <- lme(response~year,random=~1|site/reps,data=data0,na.action=na.omit)
 
 						#store the p value corresponding to the estimated trend
-						mult.pval[ij,isim] <- summary(mod.boot)$tTable[2,5]
+						summary(mod.boot)$tTable[2,5]
 						
-					} 
+					}) 
 			
 			}
 			
@@ -568,9 +514,10 @@ function(input, output, session) {
 				} 
 						
 				#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
-				thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
+				thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),
+				                 rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
 				
-				#create data frame representing exhasistive set of all reps and all sites in all years 					
+				#create data frame representing exhaustive set of all reps and all sites in all years 					
 				data0 <- expand.grid(reps=1:input$noreps, site=1:nosite, year=1:i.noyear)
 				#define a unique identifier for sites in particular years
 				data0$site.yr <- paste(data0$site, data0$year, sep="_")
@@ -586,35 +533,17 @@ function(input, output, session) {
 					
 				for(ik in 1:length(ef.rng)){
 				
-					for(isim in 1:input$nsims){
+					mult.pval[ik,] <- replicate(input$nsims, {
 						
-						#SD of the site-specific intercept
-						SD <- prv$var1	
-						#Mean of the site-specific intercept
-						k <- prv$var2  
-
-						#site-specific intercept
-						int1 <- rnorm(nosite,k,SD)
-						int.df <- data.frame(int = int1, site = c(1:nosite))
-
-						#including the site-specific intercept to the main data set
-						data0$int <- int.df$int[match(data0$site, int.df$site)]
-
-						#adding plot-specific variation for each plot
-						data0$rep_v <- data0$site_and_reps
-						levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,prv$var3))
-						data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
-
-						#simulating the response
-						data0$response <- rnorm(dim(data0)[1], mean = data0$int+ef.rng[ik]*data0$year1, sd = prv$var4)
-
+						data0 <- sim_data(data0, nosite, prv$var1, prv$var2, prv$var3, 
+						                  input$tslope, prv$var4)
 						#### model data ####			 
 						mod.boot <- lme(response~year,random=~1|site/reps,data=data0,na.action=na.omit)
 
 						#store the p value corresponding to the estimated trend
-						mult.pval[ik,isim] <- summary(mod.boot)$tTable[2,5]
+						summary(mod.boot)$tTable[2,5]
 							
-					} 
+					})
 			
 				}
 			
@@ -639,29 +568,19 @@ function(input, output, session) {
 
 		data0$year1 <- data0$year#-1	
 		
-		pvali=numeric(input$nsimi)
-		
-		for(isimi in 1:input$nsimi){
+		pvali <- replicate(input$nsimi,{
 		
 				
-			#SD of the between individual responses
-			SD <- input$var1ind 
-			#Mean of the individuals' values
-			k <- input$var2ind 
-
-			#individual means
-			data0$int <- rnorm(dim(data0)[1],k,SD)
-
-			#simulating the response
-			data0$response <- rnorm(dim(data0)[1], mean = data0$int+(input$tslope.ind*data0$year1), sd = input$var3ind) 
+			data0 <- sim_data_ind(data0, input$var1ind, input$var2ind, 
+			                      input$tslope.ind, input$var3ind)
 			
 			#fit model to simulated data
 			mod.bt.i <- lm(response~year,data=data0)
 				
 			#store the p value corresponding to the estimated trend
-			pvali[isimi] <- summary(mod.bt.i)$coefficients[2,4]
+			summary(mod.bt.i)$coefficients[2,4]
 		
-		}
+		})
 
 	return(100*(length(pvali[pvali<0.05])/length(pvali)))
 	
@@ -688,26 +607,18 @@ function(input, output, session) {
 		
 		for(ijk in 1:length(ef.rngi)){
 		
-			for(isimi in 1:input$nsimi){
+			mult.pval[ijk,] <- replicate(input$nsimi, {
 				
-				#SD of the between individual responses
-				SD <- input$var1ind 
-				#Mean of the individuals' values
-				k <- input$var2ind 
-
-				#individual means
-				data0$int <- rnorm(dim(data0)[1],k,SD)
-
-				#simulating the response
-				data0$response <- rnorm(dim(data0)[1], mean = data0$int+(input$tslope.ind*data0$year1), sd = input$var3ind) 
+				data0 <- sim_data_ind(data0, input$var1ind, input$var2ind, 
+				                      input$tslope.ind, input$var3ind)
 				
 				#fit model to simulated data
 				mod.bt.i <- lm(response~year,data=data0)
 					
 				#store the p value corresponding to the estimated trend
-				mult.pval[ijk,isimi] <- summary(mod.bt.i)$coefficients[2,4]
+				summary(mod.bt.i)$coefficients[2,4]
 				
-			}
+			})
 		}
 		
 		return(apply(mult.pval,1,function(x){100*(length(x[x<0.05])/length(x))}))
@@ -732,26 +643,18 @@ function(input, output, session) {
 			data0$year1 <- data0$year-1	
 					
 			
-			for(isimi in 1:input$nsimi){
+			mult.pval[ijk,] <- replicate(input$nsimi, {
 			
-				#SD of the between individual responses
-				SD <- input$var1ind 
-				#Mean of the individuals' values
-				k <- input$var2ind 
-
-				#individual means
-				data0$int <- rnorm(dim(data0)[1],k,SD)
-
-				#simulating the response
-				data0$response <- rnorm(dim(data0)[1], mean = data0$int+(input$tslope.ind*data0$year1), sd = input$var3ind) 
+				data0 <- sim_data_ind(data0, input$var1ind, input$var2ind, 
+				                      input$tslope.ind, input$var3ind)
 				
 				#fit model to simulated data
 				mod.bt.i <- lm(response~year,data=data0)
 					
 				#store the p value corresponding to the estimated trend
-				mult.pval[ijk,isimi] <- summary(mod.bt.i)$coefficients[2,4]
+				summary(mod.bt.i)$coefficients[2,4]
 				
-			}
+			})
 		}
 	
 	return(apply(mult.pval,1,function(x){100*(length(x[x<0.05])/length(x))}))
@@ -776,26 +679,18 @@ function(input, output, session) {
 
 			data0$year1 <- data0$year-1	
 				
-			for(isimi in 1:input$nsimi){
+			mult.pval[ijk,] <- replicate(input$nsimi,{
 			
-				#SD of the between individual responses
-				SD <- input$var1ind 
-				#Mean of the individuals' values
-				k <- input$var2ind 
-
-				#individual means
-				data0$int <- rnorm(dim(data0)[1],k,SD)
-
-				#simulating the response
-				data0$response <- rnorm(dim(data0)[1], mean = data0$int+(input$tslope.ind*data0$year1), sd = input$var3ind) 
+				data0 <- sim_data_ind(data0, input$var1ind, input$var2ind, 
+				                      input$tslope.ind, input$var3ind)
 				
 				#fit model to simulated data
 				mod.bt.i <- lm(response~year,data=data0)
 					
 				#store the p value corresponding to the estimated trend
-				mult.pval[ijk,isimi] <- summary(mod.bt.i)$coefficients[2,4]
+				summary(mod.bt.i)$coefficients[2,4]
 			
-			}
+			})
 		}
 		
 		return(apply(mult.pval,1,function(x){100*(length(x[x<0.05])/length(x))}))

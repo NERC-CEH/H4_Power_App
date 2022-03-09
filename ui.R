@@ -155,8 +155,11 @@ shinyUI(
 			  
 			  mainPanel(
 					plotOutput('plot1'),
+
 					verbatimTextOutput("test"),
-					verbatimTextOutput("test2"),
+					#verbatimTextOutput("test2"),
+
+
 					br(),
 					
 					span(textOutput("pow"),style="color:red; font-size: 40px; font-style: bold"),
