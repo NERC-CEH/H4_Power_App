@@ -112,6 +112,9 @@ function(input, output, session) {
 			i.noyear <- yrdef()[1]
 			
 			chg.tm <- as.numeric(unlist(strsplit(input$deschg.yr,",")))
+			
+			if(input$hist & input$hist.yr>0){chg.tm = chg.tm + input$hist.yr}
+			
 			i.nosite.yr <- as.numeric(unlist(strsplit(input$nosite.yr,",")))
 			smfreq <- as.numeric(unlist(strsplit(input$samfreq,",")))
 			rept <- as.numeric(unlist(strsplit(input$noreps,",")))
@@ -292,11 +295,21 @@ function(input, output, session) {
 			
 			mult.pval=matrix(ncol=input$nsims,nrow=5)
 			
-			yr.rng <- round(seq(input$nosite.yr.rng[1],input$nosite.yr.rng[2],len=5)) + input$hist.yr
+			if(input$hist & input$hist.yr>0){
+				yr.rng <- round(seq(input$nosite.yr.rng[1],input$nosite.yr.rng[2],len=5)) + input$hist.yr
+			}else{
+				yr.rng <- round(seq(input$nosite.yr.rng[1],input$nosite.yr.rng[2],len=5)) 
+			}
 			
 			if(yr.rng[1]<0){yr.rng=abs(yr.rng)}
+						
+			chg.tm <- as.numeric(unlist(strsplit(input$deschg.yr,",")))
 			
+			if(input$hist & input$hist.yr>0){chg.tm = chg.tm + input$hist.yr}
 			
+			i.nosite.yr <- as.numeric(unlist(strsplit(input$nosite.yr,",")))
+			smfreq <- as.numeric(unlist(strsplit(input$samfreq,",")))
+			rept <- as.numeric(unlist(strsplit(input$noreps,",")))
 			
 			for(ik in 1:length(yr.rng)){
 
@@ -304,30 +317,93 @@ function(input, output, session) {
 				  
 				i.noyear <- yr.rng[ik]
 			
-				if(i.noyear >= input$samfreq){
-					nosite = input$nosite.yr * input$samfreq
-				}else{
-					input$samfreq <- i.noyear
-					nosite = input$nosite.yr * input$samfreq 
-				} 
+				# if(i.noyear >= input$samfreq){
+					# nosite = input$nosite.yr * input$samfreq
+				# }else{
+					# input$samfreq <- i.noyear
+					# nosite = input$nosite.yr * input$samfreq 
+				# } 
 					
+
+				# #establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
+				# thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
+
 				#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
 				thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),
 				                 rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
+
 				
-				#create data frame representing exhasistive set of all reps and all sites in all years 					
-				data0 <- expand.grid(reps=1:input$noreps, site=1:nosite, year=1:i.noyear)
+				# #create data frame representing exhasistive set of all reps and all sites in all years 					
+				# data0 <- expand.grid(reps=1:input$noreps, site=1:nosite, year=1:i.noyear)
+				# #define a unique identifier for sites in particular years
+				# data0$site.yr <- paste(data0$site, data0$year, sep="_")
+				
+				# #thin the full data set to conform to sampling frequency under investigation
+				# data0 <- data0[is.element(data0$site.yr,thin.id),]
+				
+				# #convert all identifiers to factors
+				# data0$site <- as.factor(data0$site)
+				# data0$reps <- as.factor(data0$reps)
+				# data0$site_and_reps = interaction(data0$site,data0$reps)
+				# data0$year1 <- data0$year-1
+					if(input$deschg){
+	
+					tps <- diff(c(0,chg.tm,i.noyear))
+					nositemx = max(i.nosite.yr) * max(smfreq)
+					#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
+					thin.id=c()
+					for(ks in 1:(length(chg.tm)+1)){
+						nositep = i.nosite.yr[ks] * smfreq[ks] 
+						if(ks==1){
+							thin.id <- c(thin.id,paste(rep(1:nositep,floor(tps[ks]/smfreq[ks])),rep((1:tps[ks]),each=floor(nositep/smfreq[ks])),sep="_"))
+						}else{
+							thin.id <- c(thin.id,paste(rep(1:nositep,floor(tps[ks]/smfreq[ks])),rep(tps[(ks-1)]+(1:tps[ks]),each=floor(nositep/smfreq[ks])),sep="_"))
+						}
+					}
+				}else{
+				
+					nositemx <- nosite.r()
+					#nosite <- nosite.r()
+					thin.id <- paste(rep(1:nositemx,floor(i.noyear/smfreq)),rep(1:i.noyear,each=floor(nositemx/smfreq)),sep="_")
+				}
+				#create data frame representing exhasistive set of all reps and all sites in all years  
+				data0 <- expand.grid(reps=1:max(rept), site=1:nositemx, year=1:i.noyear)
+			  
 				#define a unique identifier for sites in particular years
 				data0$site.yr <- paste(data0$site, data0$year, sep="_")
 				
 				#thin the full data set to conform to sampling frequency under investigation
 				data0 <- data0[is.element(data0$site.yr,thin.id),]
-				
+
 				#convert all identifiers to factors
 				data0$site <- as.factor(data0$site)
 				data0$reps <- as.factor(data0$reps)
 				data0$site_and_reps = interaction(data0$site,data0$reps)
+				data0$year_and_reps = interaction(data0$year,data0$reps)
+				
+				if(length(rept)>1){
+					#if(length(rept)!=(length(chg.tm)+1)){
+					#	stop("The length of repeat visits must be one more than the number of change points")
+					#}else{
+					tpid=c()
+					for(rpi in 1:length(rept)){
+						if(rpi==1){
+							tpid=c(tpid,apply(expand.grid(1:chg.tm[rpi], 1:rept[rpi]), 1, paste, collapse="."))
+						}else{
+							if(rpi==length(rept)){
+									tpid=c(tpid,apply(expand.grid((1+chg.tm[rpi-1]):i.noyear, 1:rept[rpi]), 1, paste, collapse="."))
+								}else{
+									tpid=c(tpid,apply(expand.grid((1+chg.tm[rpi-1]):chg.tm[rpi], 1:rept[rpi]), 1, paste, collapse="."))
+								}
+							#}
+				
+						}
+					}
+					data0 <- data0[is.element(data0$year_and_reps,tpid),]
+				}
 				data0$year1 <- data0$year-1
+
+					nosite <- nosite.r()
 					
 				mult.pval[ik,] <- replicate(input$nsims,{
 					data0 <- sim_data(data0, nosite, prv$var1, prv$var2, prv$var3, 
@@ -812,7 +888,7 @@ function(input, output, session) {
 	
 	
 	output$test <- renderPrint({paramvals()})
-	output$test2 <- renderPrint({yrdef()})
+	output$test2 <- renderPrint({selectData()})
 
 	output$test.ind <- renderPrint({run.ind.scen()})
 	
@@ -847,8 +923,9 @@ function(input, output, session) {
 	output$resetable_input <- renderUI({
         times <- input$reset_input
         div(id=letters[(times %% length(letters)) + 1],
-            numericInput('noyear', 'No. of Years', 5,min=1,max=20,step=1),
-					checkboxInput("mult_yr", label = "Multiple Year Scenarios", value = FALSE),		  
+            #numericInput('noyear', 'No. of Years', 5,min=1,max=20,step=1),
+				fluidRow(align="bottom",column(6,style = "margin-top: -25px;",numericInput('noyear', 'No. of Years', 5,min=1,max=20,step=1)),column(6,actionButton("show1", "",icon = icon("info")))),	
+				fluidRow(align="bottom",column(6,checkboxInput("mult_yr", label = "Multiple Year Scenarios", value = FALSE)),column(6,actionButton("show2", "",icon = icon("info")))),		  
 					conditionalPanel("input.mult_yr==true",
 							sliderInput("nosite.yr.rng", label = "No. of Years Scenario Range", min = 2, max = 20, value = c(5,20),ticks=FALSE)  
 						),
@@ -966,6 +1043,19 @@ function(input, output, session) {
                           HTML('<iframe width="560" height="315" src="https://www.youtube.com/embed/60FWIU4sgCU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>')                   
                          ))
 		})
+		
+		
+	observeEvent(input$show1, {
+    showModal(modalDialog(title = "Test",
+                         "Some text in here to describe this function"                         
+                         ))
+		})	
+		
+	observeEvent(input$show2, {
+    showModal(modalDialog(title = "Test",
+                         "Some more text in here to describe this function2"                         
+                         ))
+		})	
 	################################################################
 	######
 	####   output tables

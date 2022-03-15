@@ -134,7 +134,8 @@ shinyUI(
 			  sidebarPanel(
 				  
 				  h1("Define Scenario"),
-					actionButton("show", "",icon = icon("info")), 
+					br(),
+					#actionButton("show", "",icon = icon("info")), 
 						uiOutput('resetable_input'),
 						
 						actionButton("update", "Update Analysis",icon = icon("calendar")),
@@ -156,7 +157,7 @@ shinyUI(
 			  
 			  mainPanel(
 					plotlyOutput('plot1'),
-					#verbatimTextOutput("test"),
+
 					br(),
 					
 					span(textOutput("pow"),style="color:red; font-size: 40px; font-style: bold"),
