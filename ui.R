@@ -1,5 +1,7 @@
 library(shiny)
 library(shinydashboard)
+library(DT)
+library(plotly)
 
 shinyUI(
 
@@ -153,7 +155,7 @@ shinyUI(
 			  ),
 			  
 			  mainPanel(
-					plotOutput('plot1'),
+					plotlyOutput('plot1'),
 					#verbatimTextOutput("test"),
 					br(),
 					
@@ -162,7 +164,9 @@ shinyUI(
 					br(),
 					br(),
 					
-					tableOutput('ptab'),
+					DTOutput('ptab'),
+					
+					downloadLink("downloadTable","Download Table"),
 					
 					conditionalPanel("input.mult_yr==true",
 					plotOutput('plot2')
@@ -200,7 +204,7 @@ shinyUI(
 			  
 			  mainPanel(
 					
-					plotOutput('indplot'),
+					plotlyOutput('indplot'),
 					
 					br(),
 					
@@ -208,7 +212,9 @@ shinyUI(
 					
 					br(),
 					
-					tableOutput('ptabind'),
+					DTOutput('ptabind'),
+					
+					downloadLink("downloadTableInd","Download Table"),
 					
 					br(),
 					

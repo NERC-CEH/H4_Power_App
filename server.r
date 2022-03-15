@@ -2,6 +2,10 @@
 library(shiny)
 library(nlme)
 library(shinydashboard)
+library(DT)
+library(ggplot2)
+theme_set(theme_classic())
+library(plotly)
 
 sim_data_ind <- function(data0, SD, k, tslope.ind, var3ind){
   #individual means
@@ -650,17 +654,43 @@ function(input, output, session) {
 	
 	
 	#boxplot of simulated data under the site based scenarios
-	output$plot1 <- renderPlot({
+	output$plot1 <- renderPlotly({
 		 if(input$update > 0) {	 
 			if(check.input()<=1){
 				if(input$hist & input$hist.yr>0){
-					boxplot(response~year,data=sim.data(),names=c((-1*(input$hist.yr-1)):0,1:input$noyear),ylab="log MEAS",xlab="Year",main="Example simulated data",cex.main=2)
+					ggplotly(ggplot(sim.data(), aes(x = year, y = response)) +
+				             stat_summary_bin(aes(colour = site), fun.data = mean_se) +
+				             stat_summary(aes(colour = site), fun = mean, geom= "line") +
+				             stat_summary_bin(fun.data = mean_se, size = 2) +
+				             stat_summary(fun = mean, geom= "line") +
+				             scale_x_continuous(labels = c((-1*(input$hist.yr-1)):0,1:input$noyear),
+				                                breaks = 1:(input$hist.yr + input$noyear)) +
+				             labs(x = "Year", y = "log MEAS",
+				                  title = "Example simulated data") +
+				             NULL)
 				}else{
-					boxplot(response~year,data=sim.data(),ylab="log MEAS",xlab="Year",main="Example simulated data",cex.main=2)
+					ggplotly(ggplot(sim.data(), aes(x = year, y = response)) +
+				             stat_summary_bin(aes(colour = site), fun.data = mean_se) +
+				             stat_summary(aes(colour = site), fun = mean, geom= "line") +
+				             stat_summary_bin(fun.data = mean_se, size = 2) +
+				             stat_summary(fun = mean, geom= "line") +
+				             labs(x = "Year", y = "log MEAS", 
+				                  title = "Example simulated data"))
 				}
 			}else{
-				plot(0,0,xaxt="n",yaxt="n",type="n",xlab="",ylab="")
-				text(0,0,"Only one multiple scenario allowed",cex=2.8)
+			  plotly_empty(type = "scatter", mode = "markers") %>%
+			    config(
+			      displayModeBar = FALSE
+			    ) %>%
+			    layout(
+			      title = list(
+			        text = "Only one multiple scenario allowed",
+			        yref = "paper",
+			        y = 0.5
+			      )
+			    )
+				# plot(0,0,xaxt="n",yaxt="n",type="n",xlab="",ylab="")
+				# text(0,0,"Only one multiple scenario allowed",cex=2.8)
 			}
 		}
 	})
@@ -707,12 +737,31 @@ function(input, output, session) {
 	})
 			
 	#boxplot of simulated data under the individual observation scenarios
-	output$indplot <- renderPlot({
+	output$indplot <- renderPlotly({
 		if(check.input()<=1){
-			boxplot(response~year,data=simdata.ind(),ylab="log Hg Conc.",xlab="Year")
+		  ggplotly(ggplot(simdata.ind(), aes(x = year, y = response)) +
+		             geom_jitter(height = 0, width = 0.1, colour = "grey") +
+		             # geom_boxplot(aes(group = year)) +
+		             stat_summary_bin(fun.data = mean_se) +
+		             stat_summary(fun = mean, geom= "line") +
+		             labs(x = "Year", y = "log Hg Conc.",
+		                  title = "Example simulated data") +
+		             NULL)
+			# boxplot(response~year,data=simdata.ind(),ylab="log Hg Conc.",xlab="Year")
 		}else{
-			plot(0,0,xaxt="n",yaxt="n",type="n",xlab="",ylab="")
-			text(0,0,"Only one multiple scenario allowed",cex=2.8)
+			# plot(0,0,xaxt="n",yaxt="n",type="n",xlab="",ylab="")
+			# text(0,0,"Only one multiple scenario allowed",cex=2.8)
+			plotly_empty(type = "scatter", mode = "markers") %>%
+			  config(
+			    displayModeBar = FALSE
+			  ) %>%
+			  layout(
+			    title = list(
+			      text = "Only one multiple scenario allowed",
+			      yref = "paper",
+			      y = 0.5
+			    )
+			  )
 		}
 		
 	})
@@ -937,7 +986,15 @@ function(input, output, session) {
 
 	})
 	
-	output$ptab <- renderTable({dtp$df})
+	output$ptab <- renderDT({dtp$df})
+	output$downloadTable <- downloadHandler(
+	  filename = function() {
+	    paste0("data-",Sys.Date(),".csv")
+	  },
+	  content = function(con){
+	    write.csv(dtp$df, con)
+	  }
+	)
 
 	
 	### table of parameters and power that can be appended for individual observation data
@@ -953,7 +1010,16 @@ function(input, output, session) {
 
 	})
 	
-	output$ptabind <- renderTable({dtpind$df})
+	output$ptabind <- renderDT({dtpind$df})
+	
+	output$downloadTableInd <- downloadHandler(
+	  filename = function() {
+	    paste0("data-",Sys.Date(),".csv")
+	  },
+	  content = function(con){
+	    write.csv(dtpind$df, con)
+	  }
+	)
 
 
 	#####################################################
