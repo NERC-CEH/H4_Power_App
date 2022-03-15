@@ -234,24 +234,53 @@ function(input, output, session) {
  	#simulate data according to the design and distribution specified for the data from individuals		
 	simdata.ind <- eventReactive(input$updateind,{	
 		
-		
+
+		prv <- paramvals.ind()
 		
 		i.noyear.ind <- input$noyear.ind + input$hist.yrind
 		
-		totno.ind=noind.yr.nm()*(i.noyear.ind/input$rep.ind)
-
-		data0 <- expand.grid(ind=1:noind.yr.nm(), year=seq(1,i.noyear.ind,by=input$rep.ind))	
+		#totno.ind=noind.yr.nm()*(i.noyear.ind/input$rep.ind)
+		
+		repind <- as.numeric(unlist(strsplit(input$rep.ind,",")))
+		
+		noindmx <- max(noind.yr.nm())
+		
+		if(input$deschg.ind){
+					chg.tmind <- as.numeric(unlist(strsplit(input$deschg_ind.yr,",")))
+					tps <- diff(c(0,chg.tmind,i.noyear.ind))
+					#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
+					thin.id=c()
+					for(ks in 1:(length(chg.tmind)+1)){
+						nositep = noind.yr.nm()[ks] 
+						if(ks==1){
+							
+							thin.id <- c(thin.id,paste(rep(1:nositep,ceiling(tps[ks]/repind[ks])),rep(seq(1,tps[ks],by=repind[ks]),each=nositep),sep="_"))
+						}else{
+							
+							thin.id <- c(thin.id,paste(rep(1:nositep,ceiling(tps[ks]/repind[ks])),rep(seq((tps[(ks-1)]+1),tps[(ks-1)]+(tps[ks]),by=repind[ks]),each=nositep),sep="_"))
+						}
+					}
+		}else{
+			
+					thin.id <- paste(rep(1:noindmx,ceiling(i.noyear.ind/min(repind))),rep(seq(1,i.noyear.ind,by=min(repind)),each=noindmx),sep="_")
+		}
+		
+		
+		data0 <- expand.grid(ind=1:max(noind.yr.nm()), year=seq(1,i.noyear.ind,by=min(repind)))	
+				
 		data0$ind.yr <- paste(data0$ind, data0$year, sep="_")		
+		data0 <- data0[is.element(data0$ind.yr,thin.id),]
+		
 		data0$ind <- as.factor(data0$ind)
 
 		data0$year1 <- data0$year-1	
 		
-	
-		data0 <- sim_data_ind(data0, input$var1ind, input$var2ind, 
-		                      input$tslope.ind, input$var3ind)
-		
+
+		data0 <- sim_data_ind(data0, prv$var1, prv$var2, 
+		                      input$tslope.ind, prv$var3)		
+							
 		return(data0)
-	
+
 	})	
 	
 	######################
@@ -288,7 +317,8 @@ function(input, output, session) {
 	})
  
 	#run the power analysis for site based data by simulating multiple data sets under the multiple year scenerio specified
-   run.mult.scen <- eventReactive(input$update,{
+	run.mult.scen <- eventReactive(input$update,{
+			
 			if(check.input()>0){	
 			
 			prv <- paramvals()
@@ -317,39 +347,11 @@ function(input, output, session) {
 				  
 				i.noyear <- yr.rng[ik]
 			
-				# if(i.noyear >= input$samfreq){
-					# nosite = input$nosite.yr * input$samfreq
-				# }else{
-					# input$samfreq <- i.noyear
-					# nosite = input$nosite.yr * input$samfreq 
-				# } 
-					
-
-				# #establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
-				# thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
-
-				#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
-				thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),
-				                 rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
-
-				
-				# #create data frame representing exhasistive set of all reps and all sites in all years 					
-				# data0 <- expand.grid(reps=1:input$noreps, site=1:nosite, year=1:i.noyear)
-				# #define a unique identifier for sites in particular years
-				# data0$site.yr <- paste(data0$site, data0$year, sep="_")
-				
-				# #thin the full data set to conform to sampling frequency under investigation
-				# data0 <- data0[is.element(data0$site.yr,thin.id),]
-				
-				# #convert all identifiers to factors
-				# data0$site <- as.factor(data0$site)
-				# data0$reps <- as.factor(data0$reps)
-				# data0$site_and_reps = interaction(data0$site,data0$reps)
-				# data0$year1 <- data0$year-1
-					if(input$deschg){
+				if(input$deschg){
 	
 					tps <- diff(c(0,chg.tm,i.noyear))
 					nositemx = max(i.nosite.yr) * max(smfreq)
+					
 					#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
 					thin.id=c()
 					for(ks in 1:(length(chg.tm)+1)){
@@ -360,12 +362,14 @@ function(input, output, session) {
 							thin.id <- c(thin.id,paste(rep(1:nositep,floor(tps[ks]/smfreq[ks])),rep(tps[(ks-1)]+(1:tps[ks]),each=floor(nositep/smfreq[ks])),sep="_"))
 						}
 					}
+				
 				}else{
 				
 					nositemx <- nosite.r()
 					#nosite <- nosite.r()
 					thin.id <- paste(rep(1:nositemx,floor(i.noyear/smfreq)),rep(1:i.noyear,each=floor(nositemx/smfreq)),sep="_")
 				}
+				
 				#create data frame representing exhasistive set of all reps and all sites in all years  
 				data0 <- expand.grid(reps=1:max(rept), site=1:nositemx, year=1:i.noyear)
 			  
@@ -401,11 +405,13 @@ function(input, output, session) {
 					}
 					data0 <- data0[is.element(data0$year_and_reps,tpid),]
 				}
+				
 				data0$year1 <- data0$year-1
 
-					nosite <- nosite.r()
+				nosite <- nosite.r()
 					
 				mult.pval[ik,] <- replicate(input$nsims,{
+					
 					data0 <- sim_data(data0, nosite, prv$var1, prv$var2, prv$var3, 
 					                  input$tslope, prv$var4)
 
@@ -414,8 +420,6 @@ function(input, output, session) {
 					#store the p value corresponding to the estimated trend
 					summary(mod.boot)$tTable[2,5]
 					
-
-
 				})
 			
 			}
@@ -424,6 +428,11 @@ function(input, output, session) {
 			}
 		
 	})
+	
+
+	
+	
+	
 	
 	#run the power analysis for site based data by simulating multiple data sets under the multiple no. of sites scenerio specified
    run.mult.st.scen <- eventReactive(input$update,{
@@ -437,39 +446,84 @@ function(input, output, session) {
 			#define a sequence covering the range of sites of interest
 			st.rng <- round(seq(input$nosite.st.rng[1],input$nosite.st.rng[2],len=5))
 			
+			chg.tm <- as.numeric(unlist(strsplit(input$deschg.yr,",")))
+			
+			if(input$hist & input$hist.yr>0){chg.tm = chg.tm + input$hist.yr}
+			
 			i.noyear <- input$noyear  + input$hist.yr
+			
+			smfreq <- as.numeric(unlist(strsplit(input$samfreq,",")))
+			rept <- as.numeric(unlist(strsplit(input$noreps,",")))
 					
 			for(ij in 1:length(st.rng)){
 
 					### simulate data #####
 					  
-					i.nosite.yr <- st.rng[ij]
+					i.nosite.yr <- rep(st.rng[ij],(length(chg.tm)+1))
 				
-					if(i.noyear >= input$samfreq){
-						nosite = i.nosite.yr * input$samfreq
-					}else{
-						input$samfreq <- i.noyear
-						nosite = i.nosite.yr * input$samfreq 
-					} 
-							
+					if(input$deschg){
+	
+					tps <- diff(c(0,chg.tm,i.noyear))
+					nositemx = max(i.nosite.yr) * max(smfreq)
+					
 					#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
-					thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),
-					                 rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
+					thin.id=c()
+					for(ks in 1:(length(chg.tm)+1)){
+						nositep = i.nosite.yr[ks] * smfreq[ks] 
+						if(ks==1){
+							thin.id <- c(thin.id,paste(rep(1:nositep,floor(tps[ks]/smfreq[ks])),rep((1:tps[ks]),each=floor(nositep/smfreq[ks])),sep="_"))
+						}else{
+							thin.id <- c(thin.id,paste(rep(1:nositep,floor(tps[ks]/smfreq[ks])),rep(tps[(ks-1)]+(1:tps[ks]),each=floor(nositep/smfreq[ks])),sep="_"))
+						}
+					}
+				
+				}else{
+				
+					nositemx <- nosite.r()
+					#nosite <- nosite.r()
+					thin.id <- paste(rep(1:nositemx,floor(i.noyear/smfreq)),rep(1:i.noyear,each=floor(nositemx/smfreq)),sep="_")
+				}
+				
+				#create data frame representing exhasistive set of all reps and all sites in all years  
+				data0 <- expand.grid(reps=1:max(rept), site=1:nositemx, year=1:i.noyear)
+			  
+				#define a unique identifier for sites in particular years
+				data0$site.yr <- paste(data0$site, data0$year, sep="_")
+				
+				#thin the full data set to conform to sampling frequency under investigation
+				data0 <- data0[is.element(data0$site.yr,thin.id),]
+
+				#convert all identifiers to factors
+				data0$site <- as.factor(data0$site)
+				data0$reps <- as.factor(data0$reps)
+				data0$site_and_reps = interaction(data0$site,data0$reps)
+				data0$year_and_reps = interaction(data0$year,data0$reps)
+				
+				if(length(rept)>1){
+					#if(length(rept)!=(length(chg.tm)+1)){
+					#	stop("The length of repeat visits must be one more than the number of change points")
+					#}else{
+					tpid=c()
+					for(rpi in 1:length(rept)){
+						if(rpi==1){
+							tpid=c(tpid,apply(expand.grid(1:chg.tm[rpi], 1:rept[rpi]), 1, paste, collapse="."))
+						}else{
+							if(rpi==length(rept)){
+									tpid=c(tpid,apply(expand.grid((1+chg.tm[rpi-1]):i.noyear, 1:rept[rpi]), 1, paste, collapse="."))
+								}else{
+									tpid=c(tpid,apply(expand.grid((1+chg.tm[rpi-1]):chg.tm[rpi], 1:rept[rpi]), 1, paste, collapse="."))
+								}
+							#}
+				
+						}
+					}
+					data0 <- data0[is.element(data0$year_and_reps,tpid),]
+				}
 					
-					#create data frame representing exhasistive set of all reps and all sites in all years 					
-					data0 <- expand.grid(reps=1:input$noreps, site=1:nosite, year=1:i.noyear)
-					#define a unique identifier for sites in particular years
-					data0$site.yr <- paste(data0$site, data0$year, sep="_")
 					
-					#thin the full data set to conform to sampling frequency under investigation
-					data0 <- data0[is.element(data0$site.yr,thin.id),]
-					
-					#convert all identifiers to factors
-					data0$site <- as.factor(data0$site)
-					data0$reps <- as.factor(data0$reps)
-					data0$site_and_reps = interaction(data0$site,data0$reps)
 					data0$year1 <- data0$year-1
 					
+					nosite <- nosite.r()
 					
 					mult.pval[ij,] <- replicate(input$nsims,{
 
@@ -505,42 +559,88 @@ function(input, output, session) {
 				#define a sequence covering the range of sites of interest
 				ef.rng <- (seq(input$nosite.ef.rng[1],input$nosite.ef.rng[2],len=5))
 	
-
+				chg.tm <- as.numeric(unlist(strsplit(input$deschg.yr,",")))
+			
+				if(input$hist & input$hist.yr>0){chg.tm = chg.tm + input$hist.yr}
+			
+				i.noyear <- input$noyear  + input$hist.yr
+			
+				i.nosite.yr <- as.numeric(unlist(strsplit(input$nosite.yr,",")))
+				smfreq <- as.numeric(unlist(strsplit(input$samfreq,",")))
+				rept <- as.numeric(unlist(strsplit(input$noreps,",")))
+				
 				### simulate data #####
 				  
-				i.noyear <- input$noyear + input$hist.yr
-			
-				if(i.noyear >= input$samfreq){
-					nosite = input$nosite.yr * input$samfreq
-				}else{
-					input$samfreq <- i.noyear
-					nosite = input$nosite.yr * input$samfreq 
-				} 
-						
-				#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
-				thin.id <- paste(rep(1:nosite,floor(i.noyear/input$samfreq)),
-				                 rep(1:i.noyear,each=floor(nosite/input$samfreq)),sep="_")
+				if(input$deschg){
+	
+					tps <- diff(c(0,chg.tm,i.noyear))
+					nositemx = max(i.nosite.yr) * max(smfreq)
+					
+					#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
+					thin.id=c()
+					for(ks in 1:(length(chg.tm)+1)){
+						nositep = i.nosite.yr[ks] * smfreq[ks] 
+						if(ks==1){
+							thin.id <- c(thin.id,paste(rep(1:nositep,floor(tps[ks]/smfreq[ks])),rep((1:tps[ks]),each=floor(nositep/smfreq[ks])),sep="_"))
+						}else{
+							thin.id <- c(thin.id,paste(rep(1:nositep,floor(tps[ks]/smfreq[ks])),rep(tps[(ks-1)]+(1:tps[ks]),each=floor(nositep/smfreq[ks])),sep="_"))
+						}
+					}
 				
-				#create data frame representing exhaustive set of all reps and all sites in all years 					
-				data0 <- expand.grid(reps=1:input$noreps, site=1:nosite, year=1:i.noyear)
+				}else{
+				
+					nositemx <- nosite.r()
+					#nosite <- nosite.r()
+					thin.id <- paste(rep(1:nositemx,floor(i.noyear/smfreq)),rep(1:i.noyear,each=floor(nositemx/smfreq)),sep="_")
+				}
+				
+				#create data frame representing exhasistive set of all reps and all sites in all years  
+				data0 <- expand.grid(reps=1:max(rept), site=1:nositemx, year=1:i.noyear)
+			  
 				#define a unique identifier for sites in particular years
 				data0$site.yr <- paste(data0$site, data0$year, sep="_")
 				
 				#thin the full data set to conform to sampling frequency under investigation
 				data0 <- data0[is.element(data0$site.yr,thin.id),]
-				
+
 				#convert all identifiers to factors
 				data0$site <- as.factor(data0$site)
 				data0$reps <- as.factor(data0$reps)
 				data0$site_and_reps = interaction(data0$site,data0$reps)
+				data0$year_and_reps = interaction(data0$year,data0$reps)
+				
+				if(length(rept)>1){
+					#if(length(rept)!=(length(chg.tm)+1)){
+					#	stop("The length of repeat visits must be one more than the number of change points")
+					#}else{
+					tpid=c()
+					for(rpi in 1:length(rept)){
+						if(rpi==1){
+							tpid=c(tpid,apply(expand.grid(1:chg.tm[rpi], 1:rept[rpi]), 1, paste, collapse="."))
+						}else{
+							if(rpi==length(rept)){
+									tpid=c(tpid,apply(expand.grid((1+chg.tm[rpi-1]):i.noyear, 1:rept[rpi]), 1, paste, collapse="."))
+								}else{
+									tpid=c(tpid,apply(expand.grid((1+chg.tm[rpi-1]):chg.tm[rpi], 1:rept[rpi]), 1, paste, collapse="."))
+								}
+							#}
+				
+						}
+					}
+					data0 <- data0[is.element(data0$year_and_reps,tpid),]
+				}
+				
 				data0$year1 <- data0$year-1
+
+				nosite <- nosite.r()
+					
 					
 				for(ik in 1:length(ef.rng)){
 				
 					mult.pval[ik,] <- replicate(input$nsims, {
 						
 						data0 <- sim_data(data0, nosite, prv$var1, prv$var2, prv$var3, 
-						                  input$tslope, prv$var4)
+						                  ef.rng[ik], prv$var4)
 						#### model data ####			 
 						mod.boot <- lme(response~year,random=~1|site/reps,data=data0,na.action=na.omit)
 
@@ -561,22 +661,52 @@ function(input, output, session) {
 			
 	#run the power analysis for data from individuals by simulating multiple data sets under the scenerio specified		
 	run.ind.scen <- eventReactive(input$updateind,{	
-
+		
+		prv <- paramvals.ind()
+		
 		i.noyear.ind <- input$noyear.ind + input$hist.yrind
 		
-		totno.ind=noind.yr.nm()*(i.noyear.ind/input$rep.ind)
-
-		data0 <- expand.grid(ind=1:noind.yr.nm(), year=seq(1,i.noyear.ind,by=input$rep.ind))	
+		#totno.ind=noind.yr.nm()*(i.noyear.ind/input$rep.ind)
+		
+		repind <- as.numeric(unlist(strsplit(input$rep.ind,",")))
+		
+		noindmx <- max(noind.yr.nm())
+		
+		if(input$deschg.ind){
+					chg.tmind <- as.numeric(unlist(strsplit(input$deschg_ind.yr,",")))
+					tps <- diff(c(0,chg.tmind,i.noyear.ind))
+					#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
+					thin.id=c()
+					for(ks in 1:(length(chg.tmind)+1)){
+						nositep = noind.yr.nm()[ks] 
+						if(ks==1){
+							
+							thin.id <- c(thin.id,paste(rep(1:nositep,ceiling(tps[ks]/repind[ks])),rep(seq(1,tps[ks],by=repind[ks]),each=nositep),sep="_"))
+						}else{
+							
+							thin.id <- c(thin.id,paste(rep(1:nositep,ceiling(tps[ks]/repind[ks])),rep(seq((tps[(ks-1)]+1),tps[(ks-1)]+(tps[ks]),by=repind[ks]),each=nositep),sep="_"))
+						}
+					}
+		}else{
+			
+					thin.id <- paste(rep(1:noindmx,ceiling(i.noyear.ind/min(repind))),rep(seq(1,i.noyear.ind,by=min(repind)),each=noindmx),sep="_")
+		}
+		
+		
+		data0 <- expand.grid(ind=1:max(noind.yr.nm()), year=seq(1,i.noyear.ind,by=min(repind)))	
+				
 		data0$ind.yr <- paste(data0$ind, data0$year, sep="_")		
+		data0 <- data0[is.element(data0$ind.yr,thin.id),]
+		
 		data0$ind <- as.factor(data0$ind)
 
-		data0$year1 <- data0$year#-1	
+		data0$year1 <- data0$year-1	
 		
 		pvali <- replicate(input$nsimi,{
 		
 				
-			data0 <- sim_data_ind(data0, input$var1ind, input$var2ind, 
-			                      input$tslope.ind, input$var3ind)
+			data0 <- sim_data_ind(data0, prv$var1, prv$var2, 
+			                      input$tslope.ind, prv$var3)
 			
 			#fit model to simulated data
 			mod.bt.i <- lm(response~year,data=data0)
@@ -587,34 +717,67 @@ function(input, output, session) {
 		})
 
 	return(100*(length(pvali[pvali<0.05])/length(pvali)))
-	
+
+
 	})	
 	
 	
 	#run the power analysis for data from individuals by simulating multiple data sets under the multiple effects scenerios specified	
 	run.ind.multef.scen <- eventReactive(input$updateind,{	
 
+		if(check.input.ind()>0){
+		
 		mult.pval=matrix(ncol=input$nsimi,nrow=5)
 				
 		ef.rngi <- (seq(input$ef.rng.ind[1],input$ef.rng.ind[2],len=5))
 		
+		prv <- paramvals.ind()
+		
 		i.noyear.ind <- input$noyear.ind + input$hist.yrind
 		
-		totno.ind=noind.yr.nm()*input$noyear.ind
-
-		data0 <- expand.grid(ind=1:noind.yr.nm(), year=1:i.noyear.ind)	
+		#totno.ind=noind.yr.nm()*(i.noyear.ind/input$rep.ind)
+		
+		repind <- as.numeric(unlist(strsplit(input$rep.ind,",")))
+		
+		noindmx <- max(noind.yr.nm())
+		
+		if(input$deschg.ind){
+					chg.tmind <- as.numeric(unlist(strsplit(input$deschg_ind.yr,",")))
+					tps <- diff(c(0,chg.tmind,i.noyear.ind))
+					#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
+					thin.id=c()
+					for(ks in 1:(length(chg.tmind)+1)){
+						nositep = noind.yr.nm()[ks] 
+						if(ks==1){
+							
+							thin.id <- c(thin.id,paste(rep(1:nositep,ceiling(tps[ks]/repind[ks])),rep(seq(1,tps[ks],by=repind[ks]),each=nositep),sep="_"))
+						}else{
+							
+							thin.id <- c(thin.id,paste(rep(1:nositep,ceiling(tps[ks]/repind[ks])),rep(seq((tps[(ks-1)]+1),tps[(ks-1)]+(tps[ks]),by=repind[ks]),each=nositep),sep="_"))
+						}
+					}
+		}else{
+			
+					thin.id <- paste(rep(1:noindmx,ceiling(i.noyear.ind/min(repind))),rep(seq(1,i.noyear.ind,by=min(repind)),each=noindmx),sep="_")
+		}
+		
+		
+		data0 <- expand.grid(ind=1:max(noind.yr.nm()), year=seq(1,i.noyear.ind,by=min(repind)))	
+				
 		data0$ind.yr <- paste(data0$ind, data0$year, sep="_")		
+		data0 <- data0[is.element(data0$ind.yr,thin.id),]
+		
 		data0$ind <- as.factor(data0$ind)
 
 		data0$year1 <- data0$year-1	
-		
+				
 		
 		for(ijk in 1:length(ef.rngi)){
 		
 			mult.pval[ijk,] <- replicate(input$nsimi, {
 				
-				data0 <- sim_data_ind(data0, input$var1ind, input$var2ind, 
-				                      input$tslope.ind, input$var3ind)
+				data0 <- sim_data_ind(data0, prv$var1, prv$var2, 
+				                      ef.rngi[ijk], prv$var3)
 				
 				#fit model to simulated data
 				mod.bt.i <- lm(response~year,data=data0)
@@ -626,31 +789,65 @@ function(input, output, session) {
 		}
 		
 		return(apply(mult.pval,1,function(x){100*(length(x[x<0.05])/length(x))}))
-	
+	}
 	})	
 	
 	#run the power analysis for data from individuals by simulating multiple data sets under the multiple no. of individuals per year scenerios specified	
 	run.ind.multind.scen <- eventReactive(input$updateind,{	
 
+	if(check.input.ind()>0){
+		
 		mult.pval=matrix(ncol=input$nsimi,nrow=5)
 		i.noyear.ind <- input$noyear.ind + input$hist.yrind		
 		ind.rngi <- round((seq(input$ind.rng.ind[1],input$ind.rng.ind[2],len=5)))
-	
+		prv <- paramvals.ind()
+		repind <- as.numeric(unlist(strsplit(input$rep.ind,",")))
+		
 		for(ijk in 1:length(ind.rngi)){
 		
-			totno.ind=ind.rngi[ijk]*i.noyear.ind
-
-			data0 <- expand.grid(ind=1:ind.rngi[ijk], year=1:i.noyear.ind)	
-			data0$ind.yr <- paste(data0$ind, data0$year, sep="_")		
-			data0$ind <- as.factor(data0$ind)
-
-			data0$year1 <- data0$year-1	
+		
+		noindmx <- ind.rngi[ijk]
+		
+		if(input$deschg.ind){
 					
+					chg.tmind <- as.numeric(unlist(strsplit(input$deschg_ind.yr,",")))
+					noind.yr.i = rep(ind.rngi[ijk],(length(chg.tmind)+1))
+					
+					tps <- diff(c(0,chg.tmind,i.noyear.ind))
+					#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
+					
+					thin.id=c()
+					for(ks in 1:(length(chg.tmind)+1)){
+						nositep = noind.yr.i[ks] 
+						if(ks==1){
+							
+							thin.id <- c(thin.id,paste(rep(1:nositep,ceiling(tps[ks]/repind[ks])),rep(seq(1,tps[ks],by=repind[ks]),each=nositep),sep="_"))
+						}else{
+							
+							thin.id <- c(thin.id,paste(rep(1:nositep,ceiling(tps[ks]/repind[ks])),rep(seq((tps[(ks-1)]+1),tps[(ks-1)]+(tps[ks]),by=repind[ks]),each=nositep),sep="_"))
+						}
+					}
+		
+		}else{
+			
+					thin.id <- paste(rep(1:noindmx,ceiling(i.noyear.ind/min(repind))),rep(seq(1,i.noyear.ind,by=min(repind)),each=noindmx),sep="_")
+		}
+		
+		
+		data0 <- expand.grid(ind=1:noindmx, year=seq(1,i.noyear.ind,by=min(repind)))	
+				
+		data0$ind.yr <- paste(data0$ind, data0$year, sep="_")		
+		data0 <- data0[is.element(data0$ind.yr,thin.id),]
+		
+		data0$ind <- as.factor(data0$ind)
+
+		data0$year1 <- data0$year-1	
+	
 			
 			mult.pval[ijk,] <- replicate(input$nsimi, {
 			
-				data0 <- sim_data_ind(data0, input$var1ind, input$var2ind, 
-				                      input$tslope.ind, input$var3ind)
+				data0 <- sim_data_ind(data0, prv$var1, prv$var2, 
+				                      input$tslope.ind, prv$var3)
 				
 				#fit model to simulated data
 				mod.bt.i <- lm(response~year,data=data0)
@@ -662,31 +859,63 @@ function(input, output, session) {
 		}
 	
 	return(apply(mult.pval,1,function(x){100*(length(x[x<0.05])/length(x))}))
-	
+	}
 	})	
 	
 	
 	#run the power analysis for data from individuals by simulating multiple data sets under the multiple no. of years scenerios specified	
 	run.ind.multyr.scen <- eventReactive(input$updateind,{	
-
+	if(check.input.ind()>0){
+		
 		mult.pval=matrix(ncol=input$nsimi,nrow=5)
 				
 		yr.rngi <- round((seq(input$yr.rng.ind[1],input$yr.rng.ind[2],len=5))) + input$hist.yrind
 	
-		for(ijk in 1:length(yr.rngi)){
+		prv <- paramvals.ind()
+		repind <- as.numeric(unlist(strsplit(input$rep.ind,",")))
 		
-			totno.ind=noind.yr.nm()*yr.rngi[ijk]
+		noindmx <- max(noind.yr.nm())
+		
+		for(ijk in 1:length(yr.rngi)){
+				
+		i.noyear.ind <- yr.rngi[ijk]
+		
+		
+		if(input$deschg.ind){
+					chg.tmind <- as.numeric(unlist(strsplit(input$deschg_ind.yr,",")))
+					tps <- diff(c(0,chg.tmind,i.noyear.ind))
+					#establish which sites need to be removed from a full exhaustive set of every replicate at every site in every year in order to conform to sampling frequency
+					thin.id=c()
+					for(ks in 1:(length(chg.tmind)+1)){
+						nositep = noind.yr.nm()[ks] 
+						if(ks==1){
+							
+							thin.id <- c(thin.id,paste(rep(1:nositep,ceiling(tps[ks]/repind[ks])),rep(seq(1,tps[ks],by=repind[ks]),each=nositep),sep="_"))
+						}else{
+							
+							thin.id <- c(thin.id,paste(rep(1:nositep,ceiling(tps[ks]/repind[ks])),rep(seq((tps[(ks-1)]+1),tps[(ks-1)]+(tps[ks]),by=repind[ks]),each=nositep),sep="_"))
+						}
+					}
+		}else{
+			
+					thin.id <- paste(rep(1:noindmx,ceiling(i.noyear.ind/min(repind))),rep(seq(1,i.noyear.ind,by=min(repind)),each=noindmx),sep="_")
+		}
+		
+		
+		data0 <- expand.grid(ind=1:max(noind.yr.nm()), year=seq(1,i.noyear.ind,by=min(repind)))	
+				
+		data0$ind.yr <- paste(data0$ind, data0$year, sep="_")		
+		data0 <- data0[is.element(data0$ind.yr,thin.id),]
+		
+		data0$ind <- as.factor(data0$ind)
 
-			data0 <- expand.grid(ind=1:noind.yr.nm(), year=1:yr.rngi[ijk])	
-			data0$ind.yr <- paste(data0$ind, data0$year, sep="_")		
-			data0$ind <- as.factor(data0$ind)
-
-			data0$year1 <- data0$year-1	
+		data0$year1 <- data0$year-1	
+		
 				
 			mult.pval[ijk,] <- replicate(input$nsimi,{
 			
-				data0 <- sim_data_ind(data0, input$var1ind, input$var2ind, 
-				                      input$tslope.ind, input$var3ind)
+				data0 <- sim_data_ind(data0, prv$var1, prv$var2, 
+				                      input$tslope.ind, prv$var3)
 				
 				#fit model to simulated data
 				mod.bt.i <- lm(response~year,data=data0)
@@ -698,7 +927,7 @@ function(input, output, session) {
 		}
 		
 		return(apply(mult.pval,1,function(x){100*(length(x[x<0.05])/length(x))}))
-	
+	}
 	})		
 	
 	
@@ -887,18 +1116,11 @@ function(input, output, session) {
 	####################
 	
 	
-	output$test <- renderPrint({paramvals()})
-	output$test2 <- renderPrint({selectData()})
+	output$test <- renderPrint({nosite.r()})
+	output$test2 <- renderPrint({simdata.ind()})
 
-	output$test.ind <- renderPrint({run.ind.scen()})
+	#output$test.ind <- renderPrint({run.ind.scen()})
 	
-	output$powind <- renderText({
-		if(input$update > 0) {
-			pvl=run.ind.scen()
-			return(paste("Estimated Power = ",round(pvl),"%",sep=""))
-		}
-	})
-
 	output$pow <- renderText({
 		if(input$update > 0) {
 			pvl=run.scen()
@@ -971,17 +1193,18 @@ function(input, output, session) {
 						conditionalPanel("input.histind==true",
 							sliderInput("hist.yrind", label = "No. of years of legacy data", min = 0, max = 10, value = c(0),ticks=FALSE)  
 						),
-						checkboxInput("deschg_ind", label = "Include change in design", value = FALSE),		  
-						conditionalPanel("input.deschg_ind==true",
+						checkboxInput("deschg.ind", label = "Include change in design", value = FALSE),		  
+						#conditionalPanel("input.deschg.ind==true",
 							textInput('deschg_ind.yr', 'Years in which change occurs (comma delimited)', "1,5,10")  
-						),
+						,#),
 						#numericInput('noind.yr', 'No. of Individuals per Year',10,min=2,max=200,step=10),
 						textInput('noind.yr', 'No. of Individuals per Year (comma delimited)', "10"),
 						checkboxInput("noind_ind", label = "Multiple Individual Scenarios", value = FALSE),		  
 						conditionalPanel("input.noind_ind==true",
 							sliderInput("ind.rng.ind", label = "No. of Individuals Range", min = 10, max = 250, value = c(10,100),ticks=FALSE)  
 						),
-						numericInput('rep.ind', 'Frequency of sampling (in years)', input$samfreq_ind_intro, min = 1, max = 5,step=1),
+						#numericInput('rep.ind', 'Frequency of sampling (in years)', input$samfreq_ind_intro, min = 1, max = 5,step=1),
+						textInput('rep.ind', 'Frequency of sampling in years (comma delimited)', "1"),
 						numericInput('tslope.ind', 'Effect Size', input$tslope_intro, min = 0, max = 2,step=0.05),
 						checkboxInput("mult_efind", label = "Multiple Effect Scenarios", value = FALSE),		  
 						conditionalPanel("input.mult_efind==true",
@@ -1027,6 +1250,25 @@ function(input, output, session) {
 		
 	})
 	
+	
+	paramvals.ind <- reactive({
+	
+		outparind <- list()
+#		outparind$var1=input$var1ind ; outparind$var2=input$var2ind ; outparind$var3=input$var3ind 
+		if(input$presetind=='bird'){
+			outparind$var1=0.2 ; outparind$var2=0.5 ; outparind$var3=0.8 ; 
+		}else{
+			if(input$presetind=='otters'){
+				outparind$var1=0.2; outparind$var2=0.5; outparind$var3=0.8 ; 
+			}
+		}
+		if(input$param_spec.ind=='val'){
+			outparind$var1=input$var1ind ; outparind$var2=input$var2ind ; outparind$var3=input$var3ind 
+		}
+		outparind
+		
+	})
+	
 	#define dynamic parameter inputs for data distributions for individual observation data	
 	output$resetable_inputpind <- renderUI({
 						times <- input$reset_inputpind
@@ -1047,13 +1289,13 @@ function(input, output, session) {
 		
 	observeEvent(input$show1, {
     showModal(modalDialog(title = "Test",
-                         "Some text in here to describe this function"                         
+                         "ASome text in here to describe this function"                         
                          ))
 		})	
 		
 	observeEvent(input$show2, {
     showModal(modalDialog(title = "Test",
-                         "Some more text in here to describe this function2"                         
+                         "BSome more text in here to describe this function2"                         
                          ))
 		})	
 	################################################################
