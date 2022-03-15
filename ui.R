@@ -198,8 +198,17 @@ shinyUI(
 						actionButton("reset_inputind", "Reset inputs"),
 						
 					h1("Input Parameters"),
+					
+						radioButtons("param_spec.ind", label = "How to specify input parameters?", 
+										choices=list("Using presets"="pr","Specify values"="val"),selected="pr"),		  
+						#conditionalPanel("input.param_spec.ind=='val'",	
 						uiOutput('resetable_inputpind'),
-						actionButton("reset_inputpind", "Reset Parameter inputs")
+						actionButton("reset_inputpind", "Reset Parameter inputs"),
+						#),
+						#conditionalPanel("input.param_spec.ind=='pr'",	
+						radioButtons("presetind", "Parameterise according to what data", 
+						choices=list("Birds"="bird","Otters"="otters"), selected = NULL)
+						#)					
 						
 			  ),
 			  
@@ -211,6 +220,7 @@ shinyUI(
 					
 					span(textOutput("powind"),style="color:red; font-size: 40px; font-style: bold"),
 					
+					verbatimTextOutput("test2"),
 					br(),
 					
 					tableOutput('ptabind'),
