@@ -220,7 +220,7 @@ shinyUI(
 					
 					span(textOutput("powind"),style="color:red; font-size: 40px; font-style: bold"),
 					
-					verbatimTextOutput("test2"),
+					# verbatimTextOutput("test2"),
 					br(),
 					
 					DTOutput('ptabind'),
