@@ -4,6 +4,7 @@ library(nlme)
 library(shinydashboard)
 library(DT)
 library(ggplot2)
+library(lme4)
 theme_set(theme_classic())
 library(plotly)
 
@@ -40,6 +41,36 @@ sim_data <- function(data0, nosite, SD, k, var3, tslope, var4){
   
   data0
 }
+
+
+
+sim_data_binom <- function(data0, nosite, SD, k, var3, tslope, var4){
+  
+  #site-specific intercept
+  int1 <- rnorm(nosite,k,SD)
+  int.df <- data.frame(int = int1, site = c(1:nosite))
+  
+  #including the site-specific intercept to the main data set
+  data0$int <- int.df$int[match(data0$site, int.df$site)]
+  
+  #adding plot-specific variation for each plot
+  data0$rep_v <- data0$site_and_reps
+  
+  levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,var3))
+  data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
+  
+  #simulating the response
+ 
+  mn=(data0$int+tslope*data0$year1)
+  data0$response <- rbinom(dim(data0)[1], 1, probit(mn))
+  
+  data0
+
+}
+
+logit=function(x){log(x/(1-x))}
+probit=function(x){exp(x)/(1+exp(x))}
+
 
 ## all code sits within a function of inputs and outputs 
 function(input, output, session) {
@@ -300,7 +331,12 @@ function(input, output, session) {
       
       nosite <- nosite.r()
       
-      sim_data(data0, nosite, prv$var1, prv$var2, prv$var3, input$tslope, prv$var4)
+		if(input$presets=='honey'){
+			sim_data_binom(data0, nosite, prv$var1, prv$var2, prv$var3, input$tslope, prv$var4)
+		}else{
+			sim_data(data0, nosite, prv$var1, prv$var2, prv$var3, input$tslope, prv$var4)
+		}
+    
     }
   })
   
@@ -394,16 +430,29 @@ function(input, output, session) {
         
         nosite <- nosite.r()
         
-        data0 <- sim_data(data0, nosite = nosite, SD = prv$var1, k = prv$var2, 
+        if(input$presets=='honey'){
+				
+				data0 <- sim_data_binom(data0, nosite = nosite, SD = prv$var1, k = prv$var2, 
+				                  var3 = prv$var3, tslope = input$tslope, var4 = prv$var4)
+
+				#### model data ####	 
+				mod.boot <- glmer(response~year + (1|site/reps),family=binomial,data=data0,na.action=na.omit)
+				#store the p value corresponding to the estimated trend
+				summary(mod.boot)$coefficients[2,4]
+				
+				
+			}else{
+		
+				data0 <- sim_data(data0, nosite = nosite, SD = prv$var1, k = prv$var2, 
                           var3 = prv$var3, tslope = input$tslope, var4 = prv$var4)
         
-        #### model data ####	 
-        mod.boot <- lme(response~year,random=~1|site/reps,
+				#### model data ####	 
+				mod.boot <- lme(response~year,random=~1|site/reps,
                         data=data0,na.action=na.omit)
-        #store the p value corresponding to the estimated trend
-        summary(mod.boot)$tTable[2,5]
+				#store the p value corresponding to the estimated trend
+				summary(mod.boot)$tTable[2,5]
         
-        
+       } 
       })
       
       return(pval)
@@ -1511,7 +1560,7 @@ function(input, output, session) {
       outpar$var1=1.5 ; outpar$var2=1 ; outpar$var3=0.25 ; outpar$var4=0.5 ;
     }else{
       if(input$presets=='honey'){
-        outpar$var1=1.75 ; outpar$var2=0.91 ; outpar$var3=0.15 ; outpar$var4=0.2 ;
+        outpar$var1=0.15 ; outpar$var2=0.16 ; outpar$var3=0.34 ; outpar$var4=0 ;
       }else{
         if(input$presets=='lead'){
           outpar$var1=2 ; outpar$var2=1.23 ; outpar$var3=0.35 ; outpar$var4=0.8 ;
