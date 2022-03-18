@@ -143,6 +143,9 @@ shinyUI(
 			             
 			             
 			             h1("Input Parameters"),
+			             radioButtons("data_distr", label = "What type of data?", 
+			                          choices=list("Normal distribution"="norm",
+			                                       "Binary data"="binom"),selected="norm"),
 			             radioButtons("param_spec", label = "How to specify input parameters?", 
 			                          choices=list("Using presets"="pr","Specify values"="val"),selected=NULL),		  
 			             conditionalPanel("input.param_spec=='val'",	

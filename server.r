@@ -19,7 +19,7 @@ sim_data_ind <- function(data0, SD, k, tslope.ind, var3ind){
   return(data0)
 }
 
-sim_data <- function(data0, nosite, SD, k, var3, tslope, var4){
+sim_data <- function(data0, nosite, SD, k, var3, tslope, var4, response){
   #site-specific intercept
   int1 <- rnorm(nosite,k,SD)
   int.df <- data.frame(int = int1, site = c(1:nosite))
@@ -36,37 +36,41 @@ sim_data <- function(data0, nosite, SD, k, var3, tslope, var4){
   
   
   #simulating the response
+  if(response == "norm"){
   data0$response <- rnorm(dim(data0)[1], mean = data0$int+tslope*data0$year1,
                           sd = var4)
-  
+  } else if(response == "binom"){
+    mn=(data0$int+tslope*data0$year1)
+    data0$response <- rbinom(dim(data0)[1], 1, probit(mn))
+  }
   data0
 }
 
 
 
-sim_data_binom <- function(data0, nosite, SD, k, var3, tslope, var4){
-  
-  #site-specific intercept
-  int1 <- rnorm(nosite,k,SD)
-  int.df <- data.frame(int = int1, site = c(1:nosite))
-  
-  #including the site-specific intercept to the main data set
-  data0$int <- int.df$int[match(data0$site, int.df$site)]
-  
-  #adding plot-specific variation for each plot
-  data0$rep_v <- data0$site_and_reps
-  
-  levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,var3))
-  data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
-  
-  #simulating the response
-  
-  mn=(data0$int+tslope*data0$year1)
-  data0$response <- rbinom(dim(data0)[1], 1, probit(mn))
-  
-  data0
-  
-}
+# sim_data_binom <- function(data0, nosite, SD, k, var3, tslope, var4){
+#   
+#   #site-specific intercept
+#   int1 <- rnorm(nosite,k,SD)
+#   int.df <- data.frame(int = int1, site = c(1:nosite))
+#   
+#   #including the site-specific intercept to the main data set
+#   data0$int <- int.df$int[match(data0$site, int.df$site)]
+#   
+#   #adding plot-specific variation for each plot
+#   data0$rep_v <- data0$site_and_reps
+#   
+#   levels(data0$rep_v) <- as.numeric(rnorm(length(levels(data0$rep_v)),0,var3))
+#   data0$int <- data0$int + as.numeric(levels(data0$rep_v))[data0$rep_v]
+#   
+#   #simulating the response
+#   
+#   mn=(data0$int+tslope*data0$year1)
+#   data0$response <- rbinom(dim(data0)[1], 1, probit(mn))
+#   
+#   data0
+#   
+# }
 
 logit=function(x){log(x/(1-x))}
 probit=function(x){exp(x)/(1+exp(x))}
@@ -400,11 +404,12 @@ function(input, output, session) {
     
     nosite <- nosite.r()
     
-    if(input$presets=='honey'){
-      sim_data_binom(data0, nosite, prv$var1, prv$var2, prv$var3, input$tslope, prv$var4)
-    }else{
-      sim_data(data0, nosite, prv$var1, prv$var2, prv$var3, input$tslope, prv$var4)
-    }
+    # if(input$data_distr=='binom'){
+    #   sim_data_binom(data0, nosite, prv$var1, prv$var2, prv$var3, input$tslope, prv$var4)
+    # }else{
+      sim_data(data0, nosite, prv$var1, prv$var2, prv$var3, input$tslope, prv$var4,
+               input$data_distr)
+    # }
     
     # }
   })
@@ -498,21 +503,24 @@ function(input, output, session) {
       
       nosite <- nosite.r()
       
-      if(input$presets=='honey'){
-        
-        data0 <- sim_data_binom(data0, nosite = nosite, SD = prv$var1, k = prv$var2, 
-                                var3 = prv$var3, tslope = input$tslope, var4 = prv$var4)
-        
-        #### model data ####	 
-        mod.boot <- glmer(response~year + (1|site/reps),family=binomial,data=data0,na.action=na.omit)
+      if(input$data_distr=='binom'){
+
+        data0 <- sim_data(data0, nosite = nosite, SD = prv$var1, k = prv$var2,
+                          var3 = prv$var3, tslope = input$tslope, var4 = prv$var4,
+                          response = input$data_distr)
+
+        #### model data ####
+        mod.boot <- glmer(response~year + (1|site/reps),family=binomial,
+                          data=data0,na.action=na.omit)
         #store the p value corresponding to the estimated trend
         summary(mod.boot)$coefficients[2,4]
-        
-        
+
+
       }else{
-        
+
         data0 <- sim_data(data0, nosite = nosite, SD = prv$var1, k = prv$var2, 
-                          var3 = prv$var3, tslope = input$tslope, var4 = prv$var4)
+                          var3 = prv$var3, tslope = input$tslope, var4 = prv$var4,
+                          response = input$data_distr)
         
         #### model data ####	 
         mod.boot <- lme(response~year,random=~1|site/reps,
@@ -520,7 +528,7 @@ function(input, output, session) {
         #store the p value corresponding to the estimated trend
         summary(mod.boot)$tTable[2,5]
         
-      } 
+      }
     })
     
     return(pval)
@@ -641,14 +649,21 @@ function(input, output, session) {
       mult.pval[ik,] <- replicate(input$nsims,{
         
         data0 <- sim_data(data0, nosite, prv$var1, prv$var2, prv$var3, 
-                          input$tslope, prv$var4)
+                          input$tslope, prv$var4, response = input$data_distr)
         
+        if(input$data_distr == "norm"){
         #### model data ####
         mod.boot <- lme(response~year,random=~1|site/reps,
                         data=data0,na.action=na.omit)
         #store the p value corresponding to the estimated trend
         summary(mod.boot)$tTable[2,5]
-        
+        } else if(input$data_distr == "binom"){
+          #### model data ####
+          mod.boot <- glmer(response~year + (1|site/reps),family=binomial,
+                            data=data0,na.action=na.omit)
+          #store the p value corresponding to the estimated trend
+          summary(mod.boot)$coefficients[2,4]
+        } else stop("run.mult.scen family error")
       })
       
     }
@@ -773,14 +788,21 @@ function(input, output, session) {
       mult.pval[ij,] <- replicate(input$nsims,{
         
         data0 <- sim_data(data0, nositemx, prv$var1, prv$var2, prv$var3, 
-                          input$tslope, prv$var4)
+                          input$tslope, prv$var4, input$data_distr)
         
-        #### model data ####
-        mod.boot <- lme(response~year,random=~1|site/reps,
-                        data=data0,na.action=na.omit)
-        
-        #store the p value corresponding to the estimated trend
-        summary(mod.boot)$tTable[2,5]
+        if(input$data_distr == "norm"){
+          #### model data ####
+          mod.boot <- lme(response~year,random=~1|site/reps,
+                          data=data0,na.action=na.omit)
+          #store the p value corresponding to the estimated trend
+          summary(mod.boot)$tTable[2,5]
+        } else if(input$data_distr == "binom"){
+          #### model data ####
+          mod.boot <- glmer(response~year + (1|site/reps),family=binomial,
+                            data=data0,na.action=na.omit)
+          #store the p value corresponding to the estimated trend
+          summary(mod.boot)$coefficients[2,4]
+        } else stop("run.mult.st.scen family error")
         
       }) 
       
@@ -901,13 +923,20 @@ function(input, output, session) {
       mult.pval[ik,] <- replicate(input$nsims, {
         
         data0 <- sim_data(data0, nosite, prv$var1, prv$var2, prv$var3, 
-                          ef.rng[ik], prv$var4)
-        #### model data ####			 
-        mod.boot <- lme(response~year,random=~1|site/reps,
-                        data=data0,na.action=na.omit)
-        
-        #store the p value corresponding to the estimated trend
-        summary(mod.boot)$tTable[2,5]
+                          ef.rng[ik], prv$var4, input$data_distr)
+        if(input$data_distr == "norm"){
+          #### model data ####
+          mod.boot <- lme(response~year,random=~1|site/reps,
+                          data=data0,na.action=na.omit)
+          #store the p value corresponding to the estimated trend
+          summary(mod.boot)$tTable[2,5]
+        } else if(input$data_distr == "binom"){
+          #### model data ####
+          mod.boot <- glmer(response~year + (1|site/reps),family=binomial,
+                            data=data0,na.action=na.omit)
+          #store the p value corresponding to the estimated trend
+          summary(mod.boot)$coefficients[2,4]
+        } else stop("run.mult.eff.scen family error")
         
       })
       
@@ -1298,7 +1327,8 @@ function(input, output, session) {
   
   #boxplot of simulated data under the site based scenarios
   output$plot1 <- renderPlotly({
-    if(input$update > 0) {	 
+    if(input$update > 0) {
+      if(input$data_distr == "norm"){
       if(input$hist & input$hist.yr>0){
         ggplotly(ggplot(sim.data(), aes(x = year, y = response)) +
                    stat_summary_bin(aes(colour = site), fun.data = mean_se) +
@@ -1319,6 +1349,36 @@ function(input, output, session) {
                    stat_summary(fun = mean, geom= "line") +
                    labs(x = "Year", y = "log MEAS", 
                         title = "Example simulated data"))
+      }
+      } else if(input$data_distr == "binom"){
+        if(input$hist & input$hist.yr>0){
+          ggplotly(ggplot(sim.data(), aes(x = year, y = response)) +
+                     # geom_jitter(aes(colour = site), width = 0.1, height = 0.1) +
+                     geom_point(aes(colour = site, group = site), position = position_dodge()) +
+                     # stat_summary_bin(aes(colour = site), fun.data = mean_se) +
+                     stat_summary(aes(colour = site), fun = mean, geom= "line") +
+                     stat_summary_bin(fun.data = mean_se, size = 2) +
+                     stat_summary(fun = mean, geom= "line") +
+                     scale_x_continuous(labels = c((-1*(input$hist.yr-1)):0,
+                                                   1:input$noyear),
+                                        breaks = 1:(input$hist.yr + input$noyear)) +
+                     labs(x = "Year", y = "log MEAS",
+                          title = "Example simulated data") +
+                     NULL)
+        }else{
+          ggplotly(ggplot(sim.data(), aes(x = year, y = response)) +
+                     # geom_jitter(aes(colour = site), width = 0.1, height = 0.1) +
+                     geom_point(aes(colour = site, group = site), 
+                                position = position_jitterdodge(dodge.width = 0.2,
+                                                                jitter.height = 0.1,
+                                                                jitter.width = 0)) +
+                     # stat_summary_bin(aes(colour = site), fun.data = mean_se) +
+                     stat_summary(aes(colour = site), fun = mean, geom= "line") +
+                     stat_summary_bin(fun.data = mean_se, size = 2) +
+                     stat_summary(fun = mean, geom= "line") +
+                     labs(x = "Year", y = "log MEAS", 
+                          title = "Example simulated data"))
+        }
       }
     }
   })
@@ -1577,15 +1637,39 @@ function(input, output, session) {
   output$resetable_inputp <- renderUI({
     times <- input$reset_inputp
     div(id=letters[(times %% length(letters)) + 1],
-        numericInput('var1', 'Between Site Variation', 1.5,min=1,max=20,step=0.1),
-        numericInput('var2', 'Average Site values', 1,min=1,max=20,step=0.1),
+        numericInput('var1', 'Between Site Variation', 
+                     switch(input$presets,
+                            "fish" = 1.5,
+                            "honey" = 0.15,
+                            "lead" = 2),
+                     min=1,max=20,step=0.1),
+        numericInput('var2', 'Average Site values',
+                     switch(input$presets,
+                            "fish"=1,
+                            "honey" = 0.16,
+                            "lead" = 1.23),
+                     min=1,max=20,step=0.1),
         numericInput('var3', 'Between replicate variation', 
-                     0.25,min=1,max=20,step=0.1),
-        numericInput('var4', 'Residual Variation', 0.5,min=1,max=20,step=0.1)					
+                     switch(input$presets,
+                            "fish" = 0.25,
+                            "honey" = 0.34,
+                            "lead" = 0.35),
+                     min=1,max=20,step=0.1),
+        numericInput('var4', 'Residual Variation', 
+                     switch(input$presets,
+                            "fish" = 0.5,
+                            "honey" = 0,
+                            "lead" = 0.8),
+                     min=1,max=20,step=0.1)					
     )
     
   })
   
+  observe(updateRadioButtons(session, "data_distr", 
+                             selected = switch(input$presets,
+                                               "fish" = "norm",
+                                               "honey" = "binom",
+                                               "lead" = "norm")))
   
   paramvals <- reactive({
     validate(
