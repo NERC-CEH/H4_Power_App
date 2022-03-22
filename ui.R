@@ -143,18 +143,35 @@ shinyUI(
 			             
 			             
 			             h1("Input Parameters"),
-			             radioButtons("data_distr", label = "What type of data?", 
+			             fluidRow(
+			               column(9,
+			                      radioButtons("data_distr", label = "What type of data?", 
 			                          choices=list("Continuous data"="norm",
-			                                       "Binary data"="binom"),selected="norm"),
-			             radioButtons("param_spec", label = "How to specify input parameters?", 
-			                          choices=list("Using presets"="pr","Specify values"="val"),selected=NULL),		  
+			                                       "Binary data"="binom"),selected="norm")),
+			               column(3, actionButton("showp1","",icon =icon("info")))),
+			             fluidRow(
+			               column(9,
+			                      radioButtons("param_spec", 
+			                                   label = "How to specify input parameters?", 
+			                                   choices=list("Using presets"="pr",
+			                                                "Specify values"="val"),
+			                                   selected=NULL)),
+			               column(3, actionButton("showp2","", icon = icon("info")))),
 			             conditionalPanel("input.param_spec=='val'",	
 			                              uiOutput('resetable_inputp'),
 			                              actionButton("reset_inputp", "Reset Parameter inputs")
 			             ),
 			             conditionalPanel("input.param_spec=='pr'",	
-			                              radioButtons("presets", "Parameterise according to what data", 
-			                                           choices=list("Marine Fish"="fish","Honey Monitoring"="honey","EA Lead"="lead"), selected = NULL)
+			                              fluidRow(
+			                                column(9,
+			                                       radioButtons("presets", 
+			                                           "Parameterise according to what data", 
+			                                           choices=list("Marine Fish"="fish",
+			                                                        "Honey Monitoring"="honey",
+			                                                        "EA Lead"="lead"), 
+			                                           selected = NULL)),
+			                                column(3, actionButton("showp3","", 
+			                                                       icon=icon("info"))))
 			             )
 			           ),
 			           
@@ -202,20 +219,28 @@ shinyUI(
 			             
 			             h1("Input Parameters"),
 			             
-			             radioButtons("param_specind", label = "How to specify input parameters?", 
-			                          choices=list("Using presets"="pr","Specify values"="val"),
-			                          selected="pr"),		  
+			             fluidRow(
+			               column(9,
+			                      radioButtons("param_specind", 
+			                                   label = "How to specify input parameters?", 
+			                                   choices=list("Using presets"="pr",
+			                                                "Specify values"="val"),
+			                                   selected="pr")),
+			               column(3,actionButton("ishowp1","",icon=icon("info")))),
 			             conditionalPanel("input.param_specind=='val'",
 			                              uiOutput('resetable_inputpind'),
 			                              actionButton("reset_inputpind",
 			                                           "Reset Parameter inputs"),
 			             ),
 			             conditionalPanel("input.param_specind=='pr'",
-			                              radioButtons("presetind", 
-			                                           "Parameterise according to what data", 
-			                                           choices=list("Birds"="bird",
-			                                                        "Otters"="otters"), 
-			                                           selected = NULL)
+			                              fluidRow(
+			                                column(9,
+			                                       radioButtons("presetind", 
+			                                                    "Parameterise according to what data", 
+			                                                    choices=list("Birds"="bird",
+			                                                                 "Otters"="otters"), 
+			                                                    selected = NULL)),
+			                                column(3, actionButton("ishowp2","",icon=icon("info"))))
 			             )
 			             
 			           ),

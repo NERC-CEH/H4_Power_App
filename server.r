@@ -1440,7 +1440,7 @@ function(input, output, session) {
   #boxplot of simulated data under the individual observation scenarios
   output$indplot <- renderPlotly({
     # if(check.input.ind()[[1]]<=1 & check.input.ind()[[2]]==""){
-    if(isTRUE(input$histind) & input$hist.yrind>0){
+    if(input$histind & input$hist.yrind>0){
       ggplotly(ggplot(simdata.ind(), aes(x = year, y = response)) +
                  geom_jitter(height = 0, width = 0.1, colour = "grey") +
                  stat_summary_bin(fun.data = mean_se) +
@@ -1557,53 +1557,85 @@ function(input, output, session) {
     div(id=letters[(times %% length(letters)) + 1],
         #numericInput('noyear', 'No. of Years', 5,min=1,max=20,step=1),
         fluidRow(align="bottom",
-                 column(6,style = "margin-top: -25px;",
+                 column(9,style = "margin-top: -25px;",
                         numericInput('noyear', 'No. of Years', 5,
                                      min=1,max=20,step=1)),
-                 column(6,actionButton("show1", "",icon = icon("info")))),	
+                 column(3,actionButton("show1", "",icon = icon("info")))),	
         fluidRow(align="bottom",
-                 column(6,
+                 column(9,
                         checkboxInput("mult_yr", label = "Multiple Year Scenarios",
                                       value = FALSE)),
-                 column(6,actionButton("show2", "",icon = icon("info")))),		  
+                 column(3,actionButton("show2", "",icon = icon("info")))),		  
         conditionalPanel("input.mult_yr==true",
                          sliderInput("nosite.yr.rng", 
                                      label = "No. of Years Scenario Range", 
                                      min = 2, max = 20, value = c(5,20),ticks=FALSE)  
         ),
-        checkboxInput("hist", label = "Include historic data", value = FALSE),		  
+        fluidRow(align = "bottom",
+                 column(9,
+                        checkboxInput("hist", label = "Include historic data", 
+                                      value = FALSE)),
+                 column(3,actionButton("show3", "", icon = icon("info")))),		  
         conditionalPanel("input.hist==true",
                          sliderInput("hist.yr", 
                                      label = "No. of years of legacy data", 
                                      min = 0, max = 10, value = c(0),ticks=FALSE)  
         ),
-        checkboxInput("deschg", label = "Include change in design", value = FALSE),		  
+        fluidRow(align = "bottom",
+                 column(9,
+                        checkboxInput("deschg", label = "Include change in design", 
+                                      value = FALSE)),
+                 column(3, actionButton("show4","",icon=icon("info")))),		  
         conditionalPanel("input.deschg==true",
                          textInput('deschg.yr', 
                                    'Years in which change occurs (comma delimited)',
                                    "0")  
         ),
-        textInput('nosite.yr', 'No. of sites per Year', "10"),
-        checkboxInput("mult_st", label = "Multiple Site Scenarios", value = FALSE),		  
+        fluidRow(align="bottom",
+                 column(9,
+                        textInput('nosite.yr', 'No. of sites per Year', "10")),
+                 column(3,actionButton("show5", "",icon = icon("info")))),	
+        fluidRow(align="bottom",
+                 column(9,
+                        checkboxInput("mult_st", label = "Multiple Site Scenarios", 
+                                      value = FALSE)),
+                 column(3,actionButton("show6", "",icon = icon("info")))),
         conditionalPanel("input.mult_st==true",
                          sliderInput("nosite.st.rng", 
                                      label = "No. of Sites Scenario Range", 
                                      min = 2, max = 100, value = c(5,25),ticks=FALSE)  
         ),  
-        
-        textInput('noreps', 'No. of within site replicates per year', "3"),
-        textInput('samfreq', 'How often sites are repeated (years)', "1"),
-        numericInput('tslope', 'Year on year change', input$tslope_intro, 
-                     min = 0, max = 0.25,step=0.01),
-        checkboxInput("mult_ef", label = "Multiple change scenarios", value = FALSE),		  
+        fluidRow(align="bottom",
+                 column(9,
+                        textInput('noreps', 'No. of within site replicates per year',
+                                  "3")),
+                 column(3,actionButton("show7", "",icon = icon("info")))),	
+        fluidRow(align="bottom",
+                 column(9,
+                        textInput('samfreq', 'How often sites are repeated (years)',
+                                  "1")),
+                 column(3,actionButton("show8", "",icon = icon("info")))),
+        fluidRow(align="bottom",
+                 column(9,
+                        numericInput('tslope', 'Year on year change', 
+                                     input$tslope_intro, 
+                                     min = 0, max = 0.25,step=0.01)),
+                 column(3,actionButton("show9", "",icon = icon("info")))),	
+        fluidRow(align="bottom",
+                 column(9,
+                        checkboxInput("mult_ef", label = "Multiple change scenarios", 
+                                      value = FALSE)),	
+                 column(3,actionButton("show10", "",icon = icon("info")))),
         conditionalPanel("input.mult_ef==true",
                          sliderInput("nosite.ef.rng", label = "Effect Size Range", 
                                      min = 0, max = 0.25, value = c(0,0.1),
                                      ticks=FALSE)  
         ),
         
-        sliderInput('nsims', 'Number of Simulations', 10, min = 1,
-                    max = 1000,step=50)
+        fluidRow(
+          column(9,sliderInput('nsims', 'Number of Simulations', 10, min = 1,
+                               max = 1000,step=50)),
+          column(3,actionButton("show11","",icon=icon("info"))))
     )
   })
   
@@ -1611,46 +1643,75 @@ function(input, output, session) {
   output$resinputind <- renderUI({
     times <- input$reset_inputind
     div(id=letters[(times %% length(letters)) + 1],
-        numericInput('noyear.ind', 'No. of Years', 5,min=1,max=20,step=1),
-        checkboxInput("noyr_ind", label = "Multiple Year Scenarios", value = FALSE),		  
+        fluidRow(
+          column(9,
+                 numericInput('noyear.ind', 'No. of Years', 5,min=1,max=20,step=1)),
+          column(3, actionButton("ishow1","",icon=icon("info")))),
+        fluidRow(
+          column(9,
+                 checkboxInput("noyr_ind", label = "Multiple Year Scenarios",
+                               value = FALSE)),
+          column(3, actionButton("ishow2","",icon=icon("info")))),
         conditionalPanel("input.noyr_ind==true",
                          sliderInput("yr.rng.ind", label = "Multiple Years Range",
                                      min = 2, max = 25, value = c(2,10),ticks=FALSE)  
         ),
-        checkboxInput("histind", label = "Include historic data", value = FALSE),		  
+        fluidRow(
+          column(9,checkboxInput("histind", label = "Include historic data", 
+                                 value = FALSE)),
+          column(3, actionButton("ishow3","",icon=icon("info")))),
         conditionalPanel("input.histind==true",
                          sliderInput("hist.yrind", 
                                      label = "No. of years of legacy data", 
                                      min = 0, max = 10, value = c(0),ticks=FALSE)  
         ),
-        checkboxInput("deschg_ind", label = "Include change in design", value = FALSE),		  
+        fluidRow(
+          column(9,checkboxInput("deschg_ind", label = "Include change in design",
+                                 value = FALSE)),
+          column(3, actionButton("ishow4","",icon=icon("info")))),
         conditionalPanel("input.deschg_ind==true",
                          textInput('deschg_ind.yr', 
                                    'Years in which change occurs (comma delimited)',
                                    "1,5,10")  
         ),
-        textInput('noind.yr', 'No. of Individuals per Year (comma delimited)', "10"),
-        checkboxInput("noind_ind", label = "Multiple Individual Scenarios",
-                      value = FALSE),		  
+        fluidRow(
+          column(9,textInput('noind.yr',
+                             'No. of Individuals per Year (comma delimited)', "10")),
+          column(3,actionButton("ishow5","",icon=icon("info")))),
+        fluidRow(
+          column(9,checkboxInput("noind_ind", 
+                                 label = "Multiple Individual Scenarios",
+                                 value = FALSE)),
+          column(3, actionButton("ishow6","",icon=icon("info")))),
         conditionalPanel("input.noind_ind==true",
                          sliderInput("ind.rng.ind",
                                      label = "No. of Individuals Range", 
                                      min = 10, max = 250, value = c(10,100),
                                      ticks=FALSE)  
         ),
-        textInput('rep.ind', 'Frequency of sampling in years (comma delimited)',
-                  "1"),
-        numericInput('tslope.ind', 'Effect Size', input$tslope_intro, 
-                     min = 0, max = 2,step=0.05),
-        checkboxInput("mult_efind", label = "Multiple Effect Scenarios", 
-                      value = FALSE),		  
+        fluidRow(
+          column(9,textInput('rep.ind', 
+                             'Frequency of sampling in years (comma delimited)',
+                             "1")),
+          column(3, actionButton("ishow7","",icon=icon("info")))),
+        fluidRow(
+          column(9,numericInput('tslope.ind', 'Effect Size', input$tslope_intro, 
+                                min = 0, max = 2,step=0.05)),
+          column(3, actionButton("ishow8","",icon=icon("info")))),
+        fluidRow(
+          column(9,checkboxInput("mult_efind", label = "Multiple Effect Scenarios", 
+                                 value = FALSE)),
+          column(3, actionButton("ishow9","",icon=icon("info")))),
         conditionalPanel("input.mult_efind==true",
                          sliderInput("ef.rng.ind", label = "Effect Size Range", 
                                      min = 0, max = 0.25, value = c(0,0.1),
                                      ticks=FALSE)  
         ),
-        sliderInput('nsimi', 'Number of Simulations', 10,
-                    min = 1, max = 1000,step=50)
+        fluidRow(
+          column(9,
+                 sliderInput('nsimi', 'Number of Simulations', 10,
+                             min = 1, max = 1000,step=50)),
+          column(3, actionButton("ishow10","",icon=icon("info"))))
         
     )
   })
@@ -1660,30 +1721,42 @@ function(input, output, session) {
   output$resetable_inputp <- renderUI({
     times <- input$reset_inputp
     div(id=letters[(times %% length(letters)) + 1],
-        numericInput('var1', 'Between Site Variation', 
-                     switch(input$presets,
-                            "fish" = 1.5,
-                            "honey" = 0.15,
-                            "lead" = 2),
-                     min=1,max=20,step=0.1),
-        numericInput('var2', 'Average Site values',
-                     switch(input$presets,
-                            "fish"=1,
-                            "honey" = 0.16,
-                            "lead" = 1.23),
-                     min=1,max=20,step=0.1),
-        numericInput('var3', 'Between replicate variation', 
-                     switch(input$presets,
-                            "fish" = 0.25,
-                            "honey" = 0.34,
-                            "lead" = 0.35),
-                     min=1,max=20,step=0.1),
-        numericInput('var4', 'Residual Variation', 
-                     switch(input$presets,
-                            "fish" = 0.5,
-                            "honey" = 0,
-                            "lead" = 0.8),
-                     min=1,max=20,step=0.1)					
+        fluidRow(
+          column(9,
+                 numericInput('var1', 'Between Site Variation', 
+                              switch(input$presets,
+                                     "fish" = 1.5,
+                                     "honey" = 0.15,
+                                     "lead" = 2),
+                              min=1,max=20,step=0.1)),
+          column(3, actionButton("showpv1","",icon=icon("info")))),
+        fluidRow(
+          column(9,
+                 numericInput('var2', 'Average Site values',
+                              switch(input$presets,
+                                     "fish"=1,
+                                     "honey" = 0.16,
+                                     "lead" = 1.23),
+                              min=1,max=20,step=0.1)),
+          column(3,actionButton("showpv2","",icon=icon("info")))),
+        fluidRow(
+          column(9,
+                 numericInput('var3', 'Between replicate variation', 
+                              switch(input$presets,
+                                     "fish" = 0.25,
+                                     "honey" = 0.34,
+                                     "lead" = 0.35),
+                              min=1,max=20,step=0.1)),
+          column(3,actionButton("showpv3","",icon=icon("info")))),
+        fluidRow(
+          column(9,
+                 numericInput('var4', 'Residual Variation', 
+                              switch(input$presets,
+                                     "fish" = 0.5,
+                                     "honey" = 0,
+                                     "lead" = 0.8),
+                              min=1,max=20,step=0.1)),
+          column(3,actionButton("showpv4","",icon=icon("info"))))
     )
     
   })
@@ -1750,22 +1823,30 @@ function(input, output, session) {
   output$resetable_inputpind <- renderUI({
     times <- input$reset_inputpind
     div(id=letters[(times %% length(letters)) + 1],
-        numericInput('var1ind', 'Between Individual Variation',
-                     switch(input$presetind,
-                            "bird" = 0.2,
-                            "otters" = 0.2),min=0.1,max=1.5,step=0.1),
-        numericInput('var2ind', 'Average value per individual',
-                     switch(input$presetind,
-                            "bird" = 0.5,
-                            "otters" = 0.5),min=0.01,max=10,step=0.1),
-        numericInput('var3ind', 'Residual Variation', 
-                     switch(input$presetind,
-                            "bird" = 0.8,
-                            "otters" = 0.8),min=0.1,max=2,step=0.1)				
+        fluidRow(
+          column(9,
+                 numericInput('var1ind', 'Between Individual Variation',
+                              switch(input$presetind,
+                                     "bird" = 0.2,
+                                     "otters" = 0.2),min=0.1,max=1.5,step=0.1)),
+          column(3, actionButton("ishowpv1","",icon=icon("info")))),
+        fluidRow(
+          column(9,
+                 numericInput('var2ind', 'Average value per individual',
+                              switch(input$presetind,
+                                     "bird" = 0.5,
+                                     "otters" = 0.5),min=0.01,max=10,step=0.1)),
+          column(3, actionButton("ishowpv2","",icon=icon("info")))),
+        fluidRow(
+          column(9,
+                 numericInput('var3ind', 'Residual Variation', 
+                              switch(input$presetind,
+                                     "bird" = 0.8,
+                                     "otters" = 0.8),min=0.1,max=2,step=0.1)),
+          column(3,actionButton("ishowpv3","",icon=icon("info"))))
     )
     
   })
-  
   
   observeEvent(input$show, {
     showModal(modalDialog(title = "Set scenario",
@@ -1774,17 +1855,383 @@ function(input, output, session) {
   })
   
   
+  # Info buttons ####
   observeEvent(input$show1, {
-    showModal(modalDialog(title = "Test",
-                          "ASome text in here to describe this function"                         
+    showModal(modalDialog(title = "No. of Years",
+                          "The number of years the survey takes place over."                         
     ))
   })	
   
   observeEvent(input$show2, {
-    showModal(modalDialog(title = "Test",
-                          "BSome more text in here to describe this function2"                         
+    showModal(modalDialog(title = "Multiple Year Scenarios",
+                          paste("If you want to look at the results of a range", 
+                                "of years the you can use this option. The results",
+                                "of varying the numbers of years across the range",
+                                "specified will be plotted in the graph beneath the",
+                                "table. The graph at the top and the table only",
+                                "show the results of the number of years specified",
+                                "above.")
+    ))
+  })
+  
+  observeEvent(input$show3, {
+    showModal(modalDialog(title = "Include historic data",
+                          paste("If you want to look at the impacts of including",
+                                "data from historic surveys click here and use the",
+                                "slider to state how many years of historic",
+                                "survey you want to include.")
+    ))
+  })
+  
+  observeEvent(input$show4, {
+    showModal(modalDialog(title = "Include change in design",
+                          paste("If you want to look at the impacts of changing",
+                                "survey design then use this option. You can",
+                                "specify the years in which change occurs by",
+                                "entering numbers separated by commas or",
+                                "semicolons into the dialogue that appears below",
+                                "when this option is selected. Use negative",
+                                "years to have change occur in the historic",
+                                "survey period if you wish. For specifying the",
+                                "change in the survey enter multiple numbers",
+                                "into the appropriate survey design option",
+                                "below. Separate numbers by commas or semicolons",
+                                "If only one option is given in the survey design",
+                                "entry then it is assumed to be constant over",
+                                "the entire survey period.")
+    ))
+  })
+  
+  observeEvent(input$show5, {
+    showModal(modalDialog(title = "No. of sites per Year",
+                          paste("Use this option to specify the number of sites",
+                                "surveyed per year. Sites are assumed to be areas",
+                                "within which there could be multiple replicates",
+                                "(see below).",
+                                "If you want this to change",
+                                "over the survey period use the above change in",
+                                "design option and enter multiple numbers here",
+                                "separated by commas or semi-colons, e.g. 20,50",
+                                "or 10;30;80")
+    ))
+  })
+  
+  observeEvent(input$show6, {
+    showModal(modalDialog(title = "Multiple Site Scenarios",
+                          paste("If you want to look at the results of a range",
+                                "of number of sites you can use this option.", 
+                                "The results",
+                                "of varying the numbers of sites across the range",
+                                "specified will be plotted in the graph beneath the",
+                                "table. The graph at the top and the table only",
+                                "show the results of the number of sites specified",
+                                "above.")
+    ))
+  })
+  
+  observeEvent(input$show7, {
+    showModal(modalDialog(title = "No. of within site replicates per year",
+                          paste("Use this option to set how many within site",
+                                "replicates per year you want your survey",
+                                "to have.", 
+                                "If you want this to change",
+                                "over the survey period use the above change in",
+                                "design option and enter multiple numbers here",
+                                "separated by commas or semi-colons, e.g. 3,5",
+                                "or 1;3;8")
+    ))
+  })
+  
+  observeEvent(input$show8, {
+    showModal(modalDialog(title = "How often sites are repeated (years)",
+                          paste("Use this option to set how often sites",
+                                "are repeated. A value of 1 means each site",
+                                "is surveyed every year while a value higher",
+                                "than 1 means that there will be longer gaps",
+                                "between resurveys, with different sites being",
+                                "surveyed each year in a rolling programme.",
+                                "If you want this to change",
+                                "over the survey period use the above change in",
+                                "design option and enter multiple numbers here",
+                                "separated by commas or semi-colons, e.g. 3,5",
+                                "or 1;3;8")
+    ))
+  })
+  
+  observeEvent(input$show9, {
+    showModal(modalDialog(title = "Year on year change",
+                          paste("Use this option to set how much the property",
+                                "of interest is changing over time.",
+                                "A value of 0 means no change over time.",
+                                "For the purposes of this app only positive change",
+                                "is allowed but the results of the power analysis",
+                                "would be the same if negative change occurred.",
+                                "If you are unsure of what levels of change you",
+                                "might expect then use the Multiple change scenarios",
+                                "option below to explore what change you'd be able",
+                                "to detect at a given survey structure, or enter",
+                                "values into this box and click Update Analysis",
+                                "to see an example of how that data might look in",
+                                "the figure to the top right. Note that while",
+                                "the figure changes when you change this number",
+                                "the new number does not come into effect until you",
+                                "press Update Analysis.")
+    ))
+  })
+  observeEvent(input$show10, {
+    showModal(modalDialog(title = "Multiple change scenarios",
+                          paste("If you want to look at the results of a range",
+                                "of change scenarios you can use this option.", 
+                                "The results",
+                                "of varying the change scenarios across the range",
+                                "specified will be plotted in the graph beneath the",
+                                "table. The graph at the top and the table only",
+                                "show the results of the Year on year change",
+                                "specified above.")
+    ))
+  })
+  observeEvent(input$show11, {
+    showModal(modalDialog(title = "Number of simulations",
+                          paste("The number of simulations from which the expected",
+                                "power (entered in table) is derived. The greater",
+                                "the number of simulations the more accurate the",
+                                "estimated power, but also the longer it takes",
+                                "to compute. The figure to the top right is just",
+                                "a single simulation while the multiple scenario",
+                                "graphs which appear below the table have each",
+                                "point in the graph representing the number of",
+                                "simulations (i.e. total number of simulations",
+                                "run = number of simulations x 5 in multiple",
+                                "scenario options).")
+    ))
+  })
+  
+  observeEvent(input$showp1, {
+    showModal(modalDialog(title = "What type of data?",
+                          paste("Is your response variable continuous, e.g.",
+                                "concentration of some pollutant, or is it binary",
+                                "e.g. above/below some detection limit?")
+    ))
+  })
+  observeEvent(input$showp2, {
+    showModal(modalDialog(title = "How to specify input parameters?",
+                          paste("We have given you the option of using parameters",
+                                "from specific surveys which you can do by",
+                                "clicking 'Using presets' or you can specify your",
+                                "own by clicking 'Specify values'. If you go",
+                                "from a specific preset to 'Specify values' the",
+                                "entries in those boxes will be already filled",
+                                "with the values from that preset.")
+    ))
+  })
+  observeEvent(input$showp3, {
+    showModal(modalDialog(title = "Parameterise according to what data?",
+                          paste("We have given you the options of using parameters",
+                                "from three surveys, the Marine Fish survey,",
+                                "the Honey Monitoring Scheme, and",
+                                "the EA lead scheme.",
+                                "The honey monitoring scheme parameters are",
+                                "appropriate for use with binary data, the",
+                                "others are appropriate for use with continuous",
+                                "data.")
+    ))
+  })
+  observeEvent(input$showpv1, {
+    showModal(modalDialog(title = "Between Site Variation",
+                          paste("How different on average is each site from",
+                                "the other sites? Higher values indicate more",
+                                "differences between sites.")
+    ))
+  })
+  observeEvent(input$showpv2, {
+    showModal(modalDialog(title = "Average Site Values",
+                          paste("This is the average value for each site at the",
+                                "starting point of survey.")
+    ))
+  })
+  observeEvent(input$showpv3, {
+    showModal(modalDialog(title = "Between Replicate Variation",
+                          paste("How different on average are the replicates within",
+                                "each site from each other?")
+    ))
+  })
+  observeEvent(input$showpv4, {
+    showModal(modalDialog(title = "Residual Variation",
+                          paste("This is the average amount of random variation",
+                                "in the outcome that",
+                                "cannot be explained by the parameters above.")
+    ))
+  })
+  
+  # Individual info buttons ####
+  observeEvent(input$ishow1, {
+    showModal(modalDialog(title = "No. of Years",
+                          "The number of years the survey takes place over."                         
     ))
   })	
+  
+  observeEvent(input$ishow2, {
+    showModal(modalDialog(title = "Multiple Year Scenarios",
+                          paste("If you want to look at the results of a range", 
+                                "of years the you can use this option. The results",
+                                "of varying the numbers of years across the range",
+                                "specified will be plotted in the graph beneath the",
+                                "table. The graph at the top and the table only",
+                                "show the results of the number of years specified",
+                                "above.")
+    ))
+  })
+  
+  observeEvent(input$ishow3, {
+    showModal(modalDialog(title = "Include historic data",
+                          paste("If you want to look at the impacts of including",
+                                "data from historic surveys click here and use the",
+                                "slider to state how many years of historic",
+                                "survey you want to include.")
+    ))
+  })
+  
+  observeEvent(input$ishow4, {
+    showModal(modalDialog(title = "Include change in design",
+                          paste("If you want to look at the impacts of changing",
+                                "survey design then use this option. You can",
+                                "specify the years in which change occurs by",
+                                "entering numbers separated by commas or",
+                                "semicolons into the dialogue that appears below",
+                                "when this option is selected. Use negative",
+                                "years to have change occur in the historic",
+                                "survey period if you wish. For specifying the",
+                                "change in the survey enter multiple numbers",
+                                "into the appropriate survey design option",
+                                "below. Separate numbers by commas or semicolons",
+                                "If only one option is given in the survey design",
+                                "entry then it is assumed to be constant over",
+                                "the entire survey period.")
+    ))
+  })
+  
+  observeEvent(input$ishow5, {
+    showModal(modalDialog(title = "No. of Individuals per Year",
+                          paste("Use this option to specify the number of individuals",
+                                "surveyed per year.",
+                                "If you want this to change",
+                                "over the survey period use the above change in",
+                                "design option and enter multiple numbers here",
+                                "separated by commas or semi-colons, e.g. 20,50",
+                                "or 10;30;80")
+    ))
+  })
+  
+  observeEvent(input$ishow6, {
+    showModal(modalDialog(title = "Multiple Individual Scenarios",
+                          paste("If you want to look at the results of a range",
+                                "of number of individuals you can use this option.", 
+                                "The results",
+                                "of varying the numbers of individuals across the range",
+                                "specified will be plotted in the graph beneath the",
+                                "table. The graph at the top and the table only",
+                                "show the results of the number of individuals specified",
+                                "above.")
+    ))
+  })
+  
+  observeEvent(input$ishow7, {
+    showModal(modalDialog(title = "Frequency of sampling in years",
+                          paste("?",
+                                "If you want this to change",
+                                "over the survey period use the above change in",
+                                "design option and enter multiple numbers here",
+                                "separated by commas or semi-colons, e.g. 3,5",
+                                "or 1;3;8")
+    ))
+  })
+  
+  observeEvent(input$ishow8, {
+    showModal(modalDialog(title = "Effect Size",
+                          paste("Use this option to set how much the property",
+                                "of interest is changing over time.",
+                                "A value of 0 means no change over time.",
+                                "For the purposes of this app only positive change",
+                                "is allowed but the results of the power analysis",
+                                "would be the same if negative change occurred.",
+                                "If you are unsure of what levels of change you",
+                                "might expect then use the Multiple change scenarios",
+                                "option below to explore what change you'd be able",
+                                "to detect at a given survey structure, or enter",
+                                "values into this box and click Update Analysis",
+                                "to see an example of how that data might look in",
+                                "the figure to the top right. Note that while",
+                                "the figure changes when you change this number",
+                                "the new number does not come into effect until you",
+                                "press Update Analysis.")
+    ))
+  })
+  observeEvent(input$ishow9, {
+    showModal(modalDialog(title = "Multiple effect scenarios",
+                          paste("If you want to look at the results of a range",
+                                "of effect scenarios you can use this option.", 
+                                "The results",
+                                "of varying the effect scenarios across the range",
+                                "specified will be plotted in the graph beneath the",
+                                "table. The graph at the top and the table only",
+                                "show the results of the Effect Size",
+                                "specified above.")
+    ))
+  })
+  observeEvent(input$ishow10, {
+    showModal(modalDialog(title = "Number of simulations",
+                          paste("The number of simulations from which the expected",
+                                "power (entered in table) is derived. The greater",
+                                "the number of simulations the more accurate the",
+                                "estimated power, but also the longer it takes",
+                                "to compute. The figure to the top right is just",
+                                "a single simulation while the multiple scenario",
+                                "graphs which appear below the table have each",
+                                "point in the graph representing the number of",
+                                "simulations (i.e. total number of simulations",
+                                "run = number of simulations x 5 in multiple",
+                                "scenario options).")
+    ))
+  })
+  
+  observeEvent(input$ishowp1, {
+    showModal(modalDialog(title = "How to specify input parameters?",
+                          paste("We have given you the option of using parameters",
+                                "from specific surveys which you can do by",
+                                "clicking 'Using presets' or you can specify your",
+                                "own by clicking 'Specify values'. If you go",
+                                "from a specific preset to 'Specify values' the",
+                                "entries in those boxes will be already filled",
+                                "with the values from that preset.")
+    ))
+  })
+  observeEvent(input$ishowp2, {
+    showModal(modalDialog(title = "Parameterise according to what data?",
+                          paste("We have given you the options of using parameters",
+                                "from two surveys, one using birds and one using otters")
+    ))
+  })
+  observeEvent(input$ishowpv1, {
+    showModal(modalDialog(title = "Between Individual Variation",
+                          paste("How different on average is each individual from",
+                                "the other individuals? Higher values indicate more",
+                                "differences between individuals.")
+    ))
+  })
+  observeEvent(input$ishowpv2, {
+    showModal(modalDialog(title = "Average Value per Individual",
+                          paste("This is the average value per individual",
+                                "at the starting point of the survey.")
+    ))
+  })
+  observeEvent(input$ishowpv3, {
+    showModal(modalDialog(title = "Residual Variation",
+                          paste("This is the average amount of random variation",
+                                "in the outcome that",
+                                "cannot be explained by the parameters above.")
+    ))
+  })
+  
   ############################################################### #
   ####
   ####   output tables ####
