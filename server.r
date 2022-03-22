@@ -103,7 +103,7 @@ function(input, output, session) {
                       nchar(input$nosite.yr)>0,"",
                     paste("Include only numbers separated by , or ; in No. of", 
                           "sites per year"))
-    flagb <- ifelse(nchar(gsub("[0-9]|,|;| ","",input$deschg.yr))==0 & 
+    flagb <- ifelse(nchar(gsub("[0-9]|,|;| |-","",input$deschg.yr))==0 & 
                       nchar(input$deschg.yr)>0,"",
                     paste("Include only numbers separated by , or ; in", 
                           "Years in which change occurs"))
@@ -144,7 +144,7 @@ function(input, output, session) {
                       paste("Total entries in how often sites are repeated needs to", 
                             "be 1 or", chg.num), "")
       flag4 <- ifelse(sum(tot.true)>1,"Only one multiple scenario allowed", "")
-      flag5 <- ifelse(max(chg.tm)>input$noyear, 
+      flag5 <- ifelse(max(chg.tm)>(input$noyear+input$hist.yr), 
                       "Please keep years in which change occurs within No. of Years",
                       "")
       flag_list <- list(flag1,flag2,flag3,flag4,flag5,flaga,flagb,flagc,flagd)
@@ -178,7 +178,7 @@ function(input, output, session) {
                       nchar(input$noind.yr)>0,"",
                     paste("Include only numbers separated by , or ; in No. of", 
                           "Individuals per year"))
-    flagb <- ifelse(nchar(gsub("[0-9]|,|;| ","",input$deschg_ind.yr))==0 & 
+    flagb <- ifelse(nchar(gsub("[0-9]|,|;| |-","",input$deschg_ind.yr))==0 & 
                       nchar(input$deschg_ind.yr)>0,"",
                     paste("Include only numbers separated by , or ; in", 
                           "Years in which change occurs"))
@@ -227,7 +227,6 @@ function(input, output, session) {
                            collapse = "\n")
       )
     }
-    print(flag)
     
     return(flag)
     
@@ -432,6 +431,11 @@ function(input, output, session) {
     if(input$deschg_ind){
       chg.tmind <- as.numeric(unlist(strsplit(input$deschg_ind.yr,",|;")))
       chg.num <- (length(chg.tmind)+1)
+      
+      if(input$histind & input$hist.yrind>0){
+        chg.tmind = chg.tmind + input$hist.yrind
+      }
+      
       tps <- diff(c(0,chg.tmind,i.noyear.ind))
       
       if(length(repind)==1){
@@ -967,6 +971,10 @@ function(input, output, session) {
     if(input$deschg_ind){
       chg.tmind <- as.numeric(unlist(strsplit(input$deschg_ind.yr,",|;")))
       chg.num <- length(chg.tmind)+1
+      
+      if(input$histind & input$hist.yrind>0){
+        chg.tmind = chg.tmind + input$hist.yrind
+      }
       tps <- diff(c(0,chg.tmind,i.noyear.ind))
       
       if(length(repind)==1){
@@ -1055,6 +1063,11 @@ function(input, output, session) {
     if(input$deschg_ind){
       chg.tmind <- as.numeric(unlist(strsplit(input$deschg_ind.yr,",|;")))
       chg.num <- length(chg.tmind)+1
+      
+      if(input$histind & input$hist.yrind>0){
+        chg.tmind = chg.tmind + input$hist.yrind
+      }
+      
       tps <- diff(c(0,chg.tmind,i.noyear.ind))
       
       if(length(repind)==1){
@@ -1148,6 +1161,9 @@ function(input, output, session) {
         if(length(repind)==1){
           repind <- rep(repind, chg.num)
         }
+        if(input$histind & input$hist.yrind>0){
+          chg.tmind = chg.tmind + input$hist.yrind
+        }
         
         tps <- diff(c(0,chg.tmind,i.noyear.ind))
         #establish which sites need to be removed from a full exhaustive set of
@@ -1229,6 +1245,10 @@ function(input, output, session) {
       
       if(input$deschg_ind){
         chg.tmind <- as.numeric(unlist(strsplit(input$deschg_ind.yr,",|;")))
+        if(input$histind & input$hist.yrind>0){
+          chg.tmind = chg.tmind + input$hist.yrind
+        }
+        
         tps <- diff(c(0,chg.tmind,i.noyear.ind))
         
         if(length(repind)==1){
@@ -1354,7 +1374,10 @@ function(input, output, session) {
         if(input$hist & input$hist.yr>0){
           ggplotly(ggplot(sim.data(), aes(x = year, y = response)) +
                      # geom_jitter(aes(colour = site), width = 0.1, height = 0.1) +
-                     geom_point(aes(colour = site, group = site), position = position_dodge()) +
+                     geom_point(aes(colour = site, group = site), 
+                                position = position_jitterdodge(dodge.width = 0.2,
+                                                                jitter.height = 0.1,
+                                                                jitter.width = 0)) +
                      # stat_summary_bin(aes(colour = site), fun.data = mean_se) +
                      stat_summary(aes(colour = site), fun = mean, geom= "line") +
                      stat_summary_bin(fun.data = mean_se, size = 2) +
@@ -1712,7 +1735,7 @@ function(input, output, session) {
         outparind$var1=0.2; outparind$var2=0.5; outparind$var3=0.8 ; 
       }
     }
-    if(input$param_spec.ind=='val'){
+    if(input$param_specind=='val'){
       outparind$var1=input$var1ind
       outparind$var2=input$var2ind 
       outparind$var3=input$var3ind 
@@ -1721,19 +1744,28 @@ function(input, output, session) {
     
   })
   
+  
   #define dynamic parameter inputs for data distributions for individual observation
   #data
   output$resetable_inputpind <- renderUI({
     times <- input$reset_inputpind
     div(id=letters[(times %% length(letters)) + 1],
         numericInput('var1ind', 'Between Individual Variation',
-                     0.2,min=0.1,max=1.5,step=0.1),
+                     switch(input$presetind,
+                            "bird" = 0.2,
+                            "otters" = 0.2),min=0.1,max=1.5,step=0.1),
         numericInput('var2ind', 'Average value per individual',
-                     0.5,min=0.01,max=10,step=0.1),
-        numericInput('var3ind', 'Residual Variation', 0.8,min=0.1,max=2,step=0.1)				
+                     switch(input$presetind,
+                            "bird" = 0.5,
+                            "otters" = 0.5),min=0.01,max=10,step=0.1),
+        numericInput('var3ind', 'Residual Variation', 
+                     switch(input$presetind,
+                            "bird" = 0.8,
+                            "otters" = 0.8),min=0.1,max=2,step=0.1)				
     )
     
   })
+  
   
   observeEvent(input$show, {
     showModal(modalDialog(title = "Set scenario",

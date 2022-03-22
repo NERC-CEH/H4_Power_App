@@ -144,7 +144,7 @@ shinyUI(
 			             
 			             h1("Input Parameters"),
 			             radioButtons("data_distr", label = "What type of data?", 
-			                          choices=list("Normal distribution"="norm",
+			                          choices=list("Continuous data"="norm",
 			                                       "Binary data"="binom"),selected="norm"),
 			             radioButtons("param_spec", label = "How to specify input parameters?", 
 			                          choices=list("Using presets"="pr","Specify values"="val"),selected=NULL),		  
@@ -202,16 +202,21 @@ shinyUI(
 			             
 			             h1("Input Parameters"),
 			             
-			             radioButtons("param_spec.ind", label = "How to specify input parameters?", 
-			                          choices=list("Using presets"="pr","Specify values"="val"),selected="pr"),		  
-			             #conditionalPanel("input.param_spec.ind=='val'",	
-			             uiOutput('resetable_inputpind'),
-			             actionButton("reset_inputpind", "Reset Parameter inputs"),
-			             #),
-			             #conditionalPanel("input.param_spec.ind=='pr'",	
-			             radioButtons("presetind", "Parameterise according to what data", 
-			                          choices=list("Birds"="bird","Otters"="otters"), selected = NULL)
-			             #)					
+			             radioButtons("param_specind", label = "How to specify input parameters?", 
+			                          choices=list("Using presets"="pr","Specify values"="val"),
+			                          selected="pr"),		  
+			             conditionalPanel("input.param_specind=='val'",
+			                              uiOutput('resetable_inputpind'),
+			                              actionButton("reset_inputpind",
+			                                           "Reset Parameter inputs"),
+			             ),
+			             conditionalPanel("input.param_specind=='pr'",
+			                              radioButtons("presetind", 
+			                                           "Parameterise according to what data", 
+			                                           choices=list("Birds"="bird",
+			                                                        "Otters"="otters"), 
+			                                           selected = NULL)
+			             )
 			             
 			           ),
 			           
