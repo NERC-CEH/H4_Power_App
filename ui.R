@@ -24,7 +24,22 @@ shinyUI(
     
     navbarPage("", id="one",
                
-               tabPanel("Introduction", 
+               tabPanel("Introduction",
+                        h3("Power Analysis Tool"),
+                        
+                        h5(paste("This tool is designed to be used to simulate",
+                                 "data under different survey designs and expected",
+                                 "change scenarios and then use this to calculate",
+                                 "the expected power of the specified survey design",
+                                 "in detecting the specified change.",
+                                 "For a full description of how this tool works",
+                                 "see the Explanation tab, for a worked example",
+                                 "see the Example tab or to get started on using",
+                                 "the app go to either the Site-based Data",
+                                 "tab or the Data from Individuals tab."))
+                        ),
+               
+               tabPanel("Explanation", 
                         
                         h1("Simulating Data"),
                         
@@ -120,6 +135,45 @@ shinyUI(
 			h5("There are a number of key aspects to the site-based data that is simulated within the application. The structure follows the assumption that there are a number of sites monitored over time, within which a number of replicate samples are taken. The sites are then repeatedly surveyed throughout the survey according to a specified frequency. The distribution of the data was assumed to be normally distributed on the log scale. The variance of this distribution represents the residual error in the data. The mean of this distribution was defined in a hierarchical manner with each replicate sample having its own mean value, which depended on the site level mean. This is shown diagrammatically in the figure below showing the structure of the data with site (shown in blue) and replicate samples (shown in grey) following some underlying distribution (i.e. each sample at each site has its own average value). On top of this a trend effect is imposed (red dots) and finally some residual variability is added (black squares). There are four different parameters to simulate the data which starts with an average site value (shown in orange) and some between site variation around this (blue). Repeat observations at each site are then distributed around the corresponding site mean with some additional between replicate variance (grey). The time trend (effect) is then imposed on the data and some residual error around this is included (black). This structure was established based on a key exemplar data set. "),
 			img(src="dist_params.png",height=600,width=900),
 			
+			h4("Data types"),
+			br(),
+			h5(paste("Within the site-based data we consider responses that can be either",
+			         "continuous or binary. A continuous variable is shown in the graph",
+			         "above, while an example of a binary variable is whether the",
+			         "concentration of some pollutant is above or below some",
+			         "detection limit. Whether the variable is continuous or binary has",
+			         "implications for how we interpret the effect size/year on year",
+			         "change. For continuous variables the effect size is simply the",
+			         "increase in the mean per year. However, the effect size for",
+			         "binary variables is more complicated as it acts upon the log-odds",
+			         "ratio rather than the percentage of sites that are in each category",
+			         "which means a given effect size will lead to differing impacts",
+			         "dependent on the initial conditions. Use the below controls to",
+			         "see what change a given effect size causes to different percentages."
+			         )),
+			
+			br(),
+			wellPanel(
+			  fluidRow(
+			    column(4, 
+			           sliderInput("exampleperc","Starting percentage of sites:",
+			                       1,99,50,step = 1)),
+			    column(4,
+			           sliderInput("exampleEffect","Effect size:",
+			                       0,0.25,0.1,0.01)),
+			    column(2,
+			           numericInput("exampleYears","Number of years:",
+			                        1,0,100)),
+			    column(2,
+			           radioButtons("exampleSign","Direction of change",
+			                        c("Positive","Negative"),"Positive"))
+			    
+			  ),
+			  br(),
+			  span(textOutput("exampleRes"),style="font-size: 20px; style:bold")
+			),
+			br(),
+			
 			h3("Data from individuals"),
 			
 			h5("The type of data considered is assumed to come from individual animals opportunistically sampled over time. There is therefore no structure within the design such as repeated observations or so-called nested values, such as replicates within a site. It is therefore reasonable to assume, in this case, that observations are independent.  There are just three components to the data that is simulated that represent the mean (red line in the figure below) and variance (the spread of the histogram below) of the concentrations in each individual and an additional residual variation terms which adds some random noise around the imposed trend (effect of interest) over time. Concentrations are assumed to follow a log-normal distribution. "),
@@ -180,7 +234,7 @@ shinyUI(
 			             
 			             br(),
 			             
-			             span(textOutput("pow"),style="color:red; font-size: 40px; font-style: bold"),
+			             span(textOutput("pow"),style="color:red; font-size: 20px"),
 			             
 			             br(),
 			             br(),
@@ -251,7 +305,7 @@ shinyUI(
 			             
 			             br(),
 			             
-			             span(textOutput("powind"),style="color:red; font-size: 40px; font-style: bold"),
+			             span(textOutput("powind"),style="color:red; font-size: 20px"),
 			             
 			             # verbatimTextOutput("test2"),
 			             br(),
@@ -282,29 +336,175 @@ shinyUI(
 			         
 			         
 			         fluidPage(
+			           h5(paste("Here in this page we go through two examples to demonstrate",
+			                    "some different usages of the app. The first using",
+			                    "the site-based data where we try and find what change",
+			                    "over time can currently be detected by the honey monitoring",
+			                    "scheme. The second uses data from individuals where we",
+			                    "try and design a scheme based on the effect size we want",
+			                    "to detect.")),
 			           
-			           h2("Run through video demonstration"),
+			           hr(),
+			           
+			           h2("Example of site-based data"),
+			           
+			           fluidRow(
+			             column(7,
+			                    h5(HTML(paste("Here we use an example from the honey monitoring",
+			                                  "scheme where we are interested in what kinds of",
+			                                  "effects we can detect given a set sampling scheme.",
+			                                  "For more information on the honey monitoring scheme",
+			                                  "see their <a href='https://honey-monitoring.ac.uk/'>",
+			                                  "website</a>."))),
+			                    br(),
+			                    h5(paste("For this analysis we are looking at",
+			                             "5 years of survey, and",
+			                             "say there are 100 sites visited per year, with only",
+			                             "1 replicate per site and where each site is visited every",
+			                             "year. We want to look at a range of potential change",
+			                             "values so we click the 'Multiple Change Scenarios'",
+			                             "button and drag the range to go from 0.05 to 0.25.",
+			                             "We also want to run a reasonable number of simulations",
+			                             "so we can be more confident in the estimated power",
+			                             "so we set the number of simulations to 200.",
+			                             "See the image on the right to see what the selection panel",
+			                             "looks like after all this.")),
+			                    br(),
+			                    h5(paste("We use the preset Honey Monitoring parameters, and",
+			                             "make sure we are simulating binary data:")),
+			                    img(src="honey_params2.png",width=250,height=220),
+			                    br(),
+			                    h5("And now we are ready to click 'Update Analysis'!"),
+			                    h5("This now takes a little while to calculate the results."
+			                    )),
+			             column(5,
+			                    img(src="honey_params.png",height=600,width=250))
+			           ),
+			           br(),
+			           h5(paste("The top right figure on the page (and the figure to the",
+			                    "left below) represents a visualisation of a",
+			                    "single dataset that follows the rules we set out",
+			                    "in the left-hand panel.",
+			                    "Note that the effect size used within this figure",
+			                    "(and also within the table) is the change over",
+			                    "time in the box, not from the range of the",
+			                    "Multiple Change Scenario slider.",
+			                    "Here we can see the",
+			                    "trend in the mean (plus standard error) over",
+			                    "time in black, and individual sites are",
+			                    "represented as coloured dots and lines.",
+			                    "To make it clearer what is going on we can",
+			                    "double click on one of the sites in the legend",
+			                    "and the rest of the sites disappear - shown",
+			                    "in the figure to the right for site 3. We can see",
+			                    "that the site goes between having",
+			                    "measurements above and below the detection limit",
+			                    "over time.")),
+			           fluidRow(
+			             column(6,
+			                    img(src="honey_single.png",height=300,width=600)
+			                    ),
+			             column(6,
+			                    img(src="honey_onesite.png",height=300,width=600))
+			           ),
+			           br(),
+			           h5(paste("What we are particularly interested in is what kind of",
+			                    "change over time we can reliably detect with this data,",
+			                    "and that is shown in the figure below the table:")),
+			           img(src="honey_multiple.png",height = 450, width = 800),
+			           h5(paste("We can see that this survey design can detect change over",
+			                    "time that is above around 0.2 per year around 80% of the time.",
+			                    "Unlike in continuous data, as this is binary data",
+			                    "this 0.2 per year does not translate",
+			                    "simply to percentage change, but we can use the widget",
+			                    "below to show the change we would expect based on the",
+			                    "initial starting percentage of 16% (given in parameter values).",
+			                    "As this power analysis works for both positive and negative",
+			                    "change we can say that 80% of the time we would detect",
+			                    "either a drop from 16% to 7% of sites being under the limit",
+			                    "or an increase from 16% to 34% of sites being over the limit.")),
+			           br(),
+			           wellPanel(
+			             fluidRow(
+			               column(4, 
+			                      sliderInput("exampleperc2","Starting percentage of sites:",
+			                                  1,99,16,step = 1)),
+			               column(4,
+			                      sliderInput("exampleEffect2","Effect size:",
+			                                  0,0.25,0.2,0.01)),
+			               column(2,
+			                      numericInput("exampleYears2","Number of years:",
+			                                   5,0,100)),
+			               column(2,
+			                      radioButtons("exampleSign2","Direction of change",
+			                                   c("Positive","Negative"),"Positive"))
+			               
+			             ),
+			             br(),
+			             span(textOutput("exampleRes2"),style="font-size: 20px; style:bold")
+			           ),
+			           br(),
+			           
+			           hr(),
 			           
 			           br(),
 			           
-			           tags$video(id="video2", type = "video/mp4",height=300,width=500,src = "Example.mp4", controls = "controls"),
+			           h2("Example using data from individuals"),
+			           
+			           h5(paste("We can use this app to not only see the effect size",
+			                    "that can be detected by a given survey design",
+			                    "but also to see how we should design a survey to",
+			                    "detect an effect we are interested in.",
+			                    "Here we will use the tab titled 'Data from Individuals'",
+			                    "to investigate how we might try and detect a change",
+			                    "in the response of 0.05 per year - this is in log",
+			                    "concentration of the pollutant in our case but could",
+			                    "be any continuous variable.")),
+			           h5(paste("We know that we have 8 years in which to detect this change",
+			                    "and that we have variable levels of funding available",
+			                    "to test individuals for the pollutant so we can try",
+			                    "multiple individual scenarios. We set up the controls",
+			                    "such that we run multiple individual scenarios from 10",
+			                    "to 70 and examine the plot output under the table:")),
+			           
+			           img(src="bird_multiple.png",width = 600, height = 400),
 			           
 			           br(),
+			           h5(paste("From this we can see that we have to test over 50",
+			                    "individuals per year over the 8 year period in order",
+			                    "to detect a change of 0.05 80% of the time.")),
+			           fluidRow(
+			             column(6,
+			           h5(paste("Unfortunately, testing 50 individuals a year for 8 years",
+			                    "(a total of 400 individuals) will exceed our budget.",
+			                    "However, we know that we have individuals in the freezer",
+			                    "that we could test now. We have 5 individuals collected",
+			                    "at 2 year intervals for the past 7 years (a total of",
+			                    "20 individuals). So we can set up the app to account",
+			                    "for this historic data, by selecting 'include historic",
+			                    "data' and including a change in design at year 0. We",
+			                    "can switch from sampling every two years to every year",
+			                    "and up the number of samples taken. We can't use the",
+			                    "multiple individual scenarios option to do this",
+			                    "but we can do it manually by trying out a few different",
+			                    "options ranging from 10 to 30 samples per year within",
+			                    "the new survey. An example of how we set this up is",
+			                    "shown to the right.")),
+			              br(),
+			              h5(paste("The results of our testing are shown in",
+			                    "the table below, we have used the interactive sorting",
+			                    "option to order the rows from highest to lowest power.")),
+			           ),
+			           column(6,
+			                  img(src="bird_inputs.png", width = 300, height = 500))),
 			           
-			           h2("Example from raw data"),
-			           h5("The figure below shows the real PBDE data observed from freshwater fish monitored at a number of sites across England between 2015 and 2019. From this data, the key distributional parameters were extracted using a model specified according to the form described on the Introduction tab. The parameters were used to simulate a pseudo data set that should adequately represent the real, observed data. This is shown in the right hand box plot below.
-			Good agreement between these two boxplots demonstrates the suitability of the simulation procedure and that the parameters extrated describe the key properties well. "),
-			img(src="ex_plots.png",height=400,width=900),align = 'center',
-			
-			h5("Because the parameters extracted from the observed data have proven to provide suitable representation, we can now simulate pseudo data sets under different designs and compare the statistical power. We start with a design similar to the observed data where we assume there is data over 5 years, that 20 sites are surveyed every years and 3 samples are taken from each site. We wish to investigate the power to detect a hypothetical change of 0.02 MEAS (on the log scale) every year. The simulated data under this scenario is shown in the boxplot below."),
-			
-			img(src="ex_sim1.png",height=400,width=600),align = 'center',
-			
-			h5("We compare this to the exact same scenario but where we assume that there exists historical data (e.g. archived sampels) that can also be included. We therefore add in an additional 5 years' worth of data and the pseudo data can be visually described by the boxplot below. "),
-			img(src="ex_sim2.png",height=400,width=600),align = 'center',
-			
-			h5("The application computes and stores the statistical power under each of these scenarios. As the summary table is appended, the results can be easily compared across the two scenarios. Showing that, in this case, the additional 5 years of legacy data has increased power from 17% to 79%"),
-			img(src="ex_tab.png",height=220,width=900),align = 'center'
+			           img(src="bird_table.png",width = 800, height = 300),
+			           br(),
+			           h5(paste("From these results we can see that adding the historic",
+			                    "data allows us to detect change of 0.05 units 80% of",
+			                    "the time just by sampling 25 individuals per year from",
+			                    "now on - a total of 220 individuals to test, and a",
+			                    "saving of around 45%."))
 			
 			
 			         )

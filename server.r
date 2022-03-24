@@ -2,6 +2,7 @@
 library(shiny)
 library(nlme)
 library(shinydashboard)
+library(shinyWidgets)
 library(DT)
 library(ggplot2)
 library(lme4)
@@ -74,10 +75,41 @@ sim_data <- function(data0, nosite, SD, k, var3, tslope, var4, response){
 
 logit=function(x){log(x/(1-x))}
 probit=function(x){exp(x)/(1+exp(x))}
+invlogit <- function(x){1/(1+exp(-x))}
 
 
 ## all code sits within a function of inputs and outputs 
 function(input, output, session) {
+  
+  # Example for the explanation tab ####
+  output$exampleRes <- reactive({
+    initProp <- 0.01*input$exampleperc
+    initLogit <- logit(initProp)
+    
+    exeff <- switch(input$exampleSign,
+                    "Positive" = input$exampleEffect,
+                    "Negative" = -1*input$exampleEffect)
+
+    outLogit <- initLogit + input$exampleYears*exeff
+    
+    paste0("Resulting percentage of sites: ",
+           100*round(invlogit(outLogit),2),"%")
+  })
+  # Example for the examples tab
+  output$exampleRes2 <- reactive({
+    initProp <- 0.01*input$exampleperc2
+    initLogit <- logit(initProp)
+    
+    exeff <- switch(input$exampleSign2,
+                    "Positive" = input$exampleEffect2,
+                    "Negative" = -1*input$exampleEffect2)
+    
+    outLogit <- initLogit + input$exampleYears2*exeff
+    
+    paste0("Resulting percentage of sites: ",
+           100*round(invlogit(outLogit),2),"%")
+  })
+  
   # 
   # reactive({validate(
   #   need(nchar(gsub("[0-9]|,|;|\\.| ","",input$nosite.yr)==0,
@@ -93,6 +125,7 @@ function(input, output, session) {
   #                    "are repeated (years)")))
   # )})
   
+  # Checks ####
   #Check how many multiple scenario boxes are ticked for the site based analysis. 
   check.input <- reactive({
     
@@ -144,7 +177,8 @@ function(input, output, session) {
                       paste("Total entries in how often sites are repeated needs to", 
                             "be 1 or", chg.num), "")
       flag4 <- ifelse(sum(tot.true)>1,"Only one multiple scenario allowed", "")
-      flag5 <- ifelse(max(chg.tm)>(input$noyear+input$hist.yr), 
+      flag5 <- ifelse(max(chg.tm)>(input$noyear)|
+                        min(chg.tm)<(-1*input$hist*input$hist.yr+1), 
                       "Please keep years in which change occurs within No. of Years",
                       "")
       flag_list <- list(flag1,flag2,flag3,flag4,flag5,flaga,flagb,flagc,flagd)
@@ -209,7 +243,8 @@ function(input, output, session) {
                       paste("Total entries in number of within site replicates", 
                             "needs to be 1 or", chg.num), "")
       flag4 <- ifelse(sum(tot.true)>1,"Only one multiple scenario allowed", "")
-      flag5 <- ifelse(max(chg.tm)>input$noyear.ind, 
+      flag5 <- ifelse(max(chg.tm)>input$noyear.ind|
+                        min(chg.tm)<(-1*input$histind*input$hist.yrind+1), 
                       "Please keep years in which change occurs within No. of Years",
                       "")
       flag_list <- list(flag1,flag2,flag4,flag5,flaga,flagb,flagc)
@@ -452,7 +487,6 @@ function(input, output, session) {
       for(ks in 1:chg.num){
         nositep = noind_yr[ks] 
         if(ks==1){
-          
           thin.id <- c(thin.id,paste(rep(1:nositep,ceiling(tps[ks]/repind[ks])),
                                      rep(seq(1,tps[ks],by=repind[ks]),each=nositep),
                                      sep="_"))
@@ -1358,7 +1392,7 @@ function(input, output, session) {
                    scale_x_continuous(labels = c((-1*(input$hist.yr-1)):0,
                                                  1:input$noyear),
                                       breaks = 1:(input$hist.yr + input$noyear)) +
-                   labs(x = "Year", y = "log MEAS",
+                   labs(x = "Year", y = "log(Concentration)",
                         title = "Example simulated data") +
                    NULL)
       }else{
@@ -1367,7 +1401,7 @@ function(input, output, session) {
                    stat_summary(aes(colour = site), fun = mean, geom= "line") +
                    stat_summary_bin(fun.data = mean_se, size = 2) +
                    stat_summary(fun = mean, geom= "line") +
-                   labs(x = "Year", y = "log MEAS", 
+                   labs(x = "Year", y = "log(Concentration)", 
                         title = "Example simulated data"))
       }
       } else if(input$data_distr == "binom"){
@@ -1385,7 +1419,7 @@ function(input, output, session) {
                      scale_x_continuous(labels = c((-1*(input$hist.yr-1)):0,
                                                    1:input$noyear),
                                         breaks = 1:(input$hist.yr + input$noyear)) +
-                     labs(x = "Year", y = "log MEAS",
+                     labs(x = "Year", y = "Proportion",
                           title = "Example simulated data") +
                      NULL)
         }else{
@@ -1399,7 +1433,7 @@ function(input, output, session) {
                      stat_summary(aes(colour = site), fun = mean, geom= "line") +
                      stat_summary_bin(fun.data = mean_se, size = 2) +
                      stat_summary(fun = mean, geom= "line") +
-                     labs(x = "Year", y = "log MEAS", 
+                     labs(x = "Year", y = "Proportion", 
                           title = "Example simulated data"))
         }
       }
@@ -1445,7 +1479,7 @@ function(input, output, session) {
                  geom_jitter(height = 0, width = 0.1, colour = "grey") +
                  stat_summary_bin(fun.data = mean_se) +
                  stat_summary(fun = mean, geom= "line") +
-                 labs(x = "Year", y = "log MEAS",
+                 labs(x = "Year", y = "log(Concentration)",
                       title = "Example simulated data") +
                  scale_x_continuous(labels = c((-1*(input$hist.yrind-1)):0,
                                                1:input$noyear.ind),
@@ -1457,7 +1491,7 @@ function(input, output, session) {
                  geom_jitter(height = 0, width = 0.1, colour = "grey") +
                  stat_summary_bin(fun.data = mean_se) +
                  stat_summary(fun = mean, geom= "line") +
-                 labs(x = "Year", y = "log MEAS",
+                 labs(x = "Year", y = "log(Concentration)",
                       title = "Example simulated data") +
                  NULL)
     }
@@ -1633,8 +1667,9 @@ function(input, output, session) {
         ),
         
         fluidRow(
-          column(9,sliderInput('nsims', 'Number of Simulations', 10, min = 1,
-                               max = 1000,step=50)),
+          column(9,sliderTextInput('nsims', 'Number of Simulations',
+                                   c(1:10,seq(20,90,10),seq(100,1000,100)),
+                                   10)),
           column(3,actionButton("show11","",icon=icon("info"))))
     )
   })
@@ -1708,9 +1743,9 @@ function(input, output, session) {
                                      ticks=FALSE)  
         ),
         fluidRow(
-          column(9,
-                 sliderInput('nsimi', 'Number of Simulations', 10,
-                             min = 1, max = 1000,step=50)),
+          column(9,sliderTextInput('nsimi', 'Number of Simulations',
+                                   c(1:10,seq(20,90,10),seq(100,1000,100)),
+                                   10)),
           column(3, actionButton("ishow10","",icon=icon("info"))))
         
     )
@@ -1850,7 +1885,8 @@ function(input, output, session) {
   
   observeEvent(input$show, {
     showModal(modalDialog(title = "Set scenario",
-                          HTML('<iframe width="560" height="315" src="https://www.youtube.com/embed/60FWIU4sgCU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>')                   
+                          HTML('<iframe width="560" height="315" src="https://www.youtube.com/embed/60FWIU4sgCU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'),
+                          easyClose = TRUE                   
     ))
   })
   
@@ -1858,7 +1894,8 @@ function(input, output, session) {
   # Info buttons ####
   observeEvent(input$show1, {
     showModal(modalDialog(title = "No. of Years",
-                          "The number of years the survey takes place over."                         
+                          "The number of years the survey takes place over.",
+                          easyClose = TRUE
     ))
   })	
   
@@ -1870,7 +1907,8 @@ function(input, output, session) {
                                 "specified will be plotted in the graph beneath the",
                                 "table. The graph at the top and the table only",
                                 "show the results of the number of years specified",
-                                "above.")
+                                "above."),
+                          easyClose = TRUE
     ))
   })
   
@@ -1879,7 +1917,8 @@ function(input, output, session) {
                           paste("If you want to look at the impacts of including",
                                 "data from historic surveys click here and use the",
                                 "slider to state how many years of historic",
-                                "survey you want to include.")
+                                "survey you want to include."),
+                          easyClose = TRUE
     ))
   })
   
@@ -1898,7 +1937,8 @@ function(input, output, session) {
                                 "below. Separate numbers by commas or semicolons",
                                 "If only one option is given in the survey design",
                                 "entry then it is assumed to be constant over",
-                                "the entire survey period.")
+                                "the entire survey period."),
+                          easyClose = TRUE
     ))
   })
   
@@ -1912,7 +1952,8 @@ function(input, output, session) {
                                 "over the survey period use the above change in",
                                 "design option and enter multiple numbers here",
                                 "separated by commas or semi-colons, e.g. 20,50",
-                                "or 10;30;80")
+                                "or 10;30;80"),
+                          easyClose = TRUE
     ))
   })
   
@@ -1925,7 +1966,8 @@ function(input, output, session) {
                                 "specified will be plotted in the graph beneath the",
                                 "table. The graph at the top and the table only",
                                 "show the results of the number of sites specified",
-                                "above.")
+                                "above."),
+                          easyClose = TRUE
     ))
   })
   
@@ -1938,7 +1980,8 @@ function(input, output, session) {
                                 "over the survey period use the above change in",
                                 "design option and enter multiple numbers here",
                                 "separated by commas or semi-colons, e.g. 3,5",
-                                "or 1;3;8")
+                                "or 1;3;8"),
+                          easyClose = TRUE
     ))
   })
   
@@ -1954,7 +1997,8 @@ function(input, output, session) {
                                 "over the survey period use the above change in",
                                 "design option and enter multiple numbers here",
                                 "separated by commas or semi-colons, e.g. 3,5",
-                                "or 1;3;8")
+                                "or 1;3;8"),
+                          easyClose = TRUE
     ))
   })
   
@@ -1975,7 +2019,8 @@ function(input, output, session) {
                                 "the figure to the top right. Note that while",
                                 "the figure changes when you change this number",
                                 "the new number does not come into effect until you",
-                                "press Update Analysis.")
+                                "press Update Analysis."),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$show10, {
@@ -1987,7 +2032,8 @@ function(input, output, session) {
                                 "specified will be plotted in the graph beneath the",
                                 "table. The graph at the top and the table only",
                                 "show the results of the Year on year change",
-                                "specified above.")
+                                "specified above."),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$show11, {
@@ -2002,7 +2048,8 @@ function(input, output, session) {
                                 "point in the graph representing the number of",
                                 "simulations (i.e. total number of simulations",
                                 "run = number of simulations x 5 in multiple",
-                                "scenario options).")
+                                "scenario options)."),
+                          easyClose = TRUE
     ))
   })
   
@@ -2010,7 +2057,8 @@ function(input, output, session) {
     showModal(modalDialog(title = "What type of data?",
                           paste("Is your response variable continuous, e.g.",
                                 "concentration of some pollutant, or is it binary",
-                                "e.g. above/below some detection limit?")
+                                "e.g. above/below some detection limit?"),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$showp2, {
@@ -2021,52 +2069,59 @@ function(input, output, session) {
                                 "own by clicking 'Specify values'. If you go",
                                 "from a specific preset to 'Specify values' the",
                                 "entries in those boxes will be already filled",
-                                "with the values from that preset.")
+                                "with the values from that preset."),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$showp3, {
     showModal(modalDialog(title = "Parameterise according to what data?",
-                          paste("We have given you the options of using parameters",
+                          HTML(paste("We have given you the options of using parameters",
                                 "from three surveys, the Marine Fish survey,",
-                                "the Honey Monitoring Scheme, and",
+                                "the <a href = 'https://honey-monitoring.ac.uk/'>Honey Monitoring Scheme</a>, and",
                                 "the EA lead scheme.",
                                 "The honey monitoring scheme parameters are",
                                 "appropriate for use with binary data, the",
                                 "others are appropriate for use with continuous",
-                                "data.")
+                                "data.")),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$showpv1, {
     showModal(modalDialog(title = "Between Site Variation",
                           paste("How different on average is each site from",
                                 "the other sites? Higher values indicate more",
-                                "differences between sites.")
+                                "differences between sites."),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$showpv2, {
     showModal(modalDialog(title = "Average Site Values",
                           paste("This is the average value for each site at the",
-                                "starting point of survey.")
+                                "starting point of survey."),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$showpv3, {
     showModal(modalDialog(title = "Between Replicate Variation",
                           paste("How different on average are the replicates within",
-                                "each site from each other?")
+                                "each site from each other?"),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$showpv4, {
     showModal(modalDialog(title = "Residual Variation",
                           paste("This is the average amount of random variation",
                                 "in the outcome that",
-                                "cannot be explained by the parameters above.")
+                                "cannot be explained by the parameters above."),
+                          easyClose = TRUE
     ))
   })
   
   # Individual info buttons ####
   observeEvent(input$ishow1, {
     showModal(modalDialog(title = "No. of Years",
-                          "The number of years the survey takes place over."                         
+                          "The number of years the survey takes place over." ,
+                          easyClose = TRUE                        
     ))
   })	
   
@@ -2078,7 +2133,8 @@ function(input, output, session) {
                                 "specified will be plotted in the graph beneath the",
                                 "table. The graph at the top and the table only",
                                 "show the results of the number of years specified",
-                                "above.")
+                                "above."),
+                          easyClose = TRUE
     ))
   })
   
@@ -2087,7 +2143,8 @@ function(input, output, session) {
                           paste("If you want to look at the impacts of including",
                                 "data from historic surveys click here and use the",
                                 "slider to state how many years of historic",
-                                "survey you want to include.")
+                                "survey you want to include."),
+                          easyClose = TRUE
     ))
   })
   
@@ -2106,7 +2163,8 @@ function(input, output, session) {
                                 "below. Separate numbers by commas or semicolons",
                                 "If only one option is given in the survey design",
                                 "entry then it is assumed to be constant over",
-                                "the entire survey period.")
+                                "the entire survey period."),
+                          easyClose = TRUE
     ))
   })
   
@@ -2118,7 +2176,8 @@ function(input, output, session) {
                                 "over the survey period use the above change in",
                                 "design option and enter multiple numbers here",
                                 "separated by commas or semi-colons, e.g. 20,50",
-                                "or 10;30;80")
+                                "or 10;30;80"),
+                          easyClose = TRUE
     ))
   })
   
@@ -2131,7 +2190,8 @@ function(input, output, session) {
                                 "specified will be plotted in the graph beneath the",
                                 "table. The graph at the top and the table only",
                                 "show the results of the number of individuals specified",
-                                "above.")
+                                "above."),
+                          easyClose = TRUE
     ))
   })
   
@@ -2142,7 +2202,8 @@ function(input, output, session) {
                                 "over the survey period use the above change in",
                                 "design option and enter multiple numbers here",
                                 "separated by commas or semi-colons, e.g. 3,5",
-                                "or 1;3;8")
+                                "or 1;3;8"),
+                          easyClose = TRUE
     ))
   })
   
@@ -2163,7 +2224,8 @@ function(input, output, session) {
                                 "the figure to the top right. Note that while",
                                 "the figure changes when you change this number",
                                 "the new number does not come into effect until you",
-                                "press Update Analysis.")
+                                "press Update Analysis."),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$ishow9, {
@@ -2175,7 +2237,8 @@ function(input, output, session) {
                                 "specified will be plotted in the graph beneath the",
                                 "table. The graph at the top and the table only",
                                 "show the results of the Effect Size",
-                                "specified above.")
+                                "specified above."),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$ishow10, {
@@ -2190,7 +2253,8 @@ function(input, output, session) {
                                 "point in the graph representing the number of",
                                 "simulations (i.e. total number of simulations",
                                 "run = number of simulations x 5 in multiple",
-                                "scenario options).")
+                                "scenario options)."),
+                          easyClose = TRUE
     ))
   })
   
@@ -2202,33 +2266,38 @@ function(input, output, session) {
                                 "own by clicking 'Specify values'. If you go",
                                 "from a specific preset to 'Specify values' the",
                                 "entries in those boxes will be already filled",
-                                "with the values from that preset.")
+                                "with the values from that preset."),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$ishowp2, {
     showModal(modalDialog(title = "Parameterise according to what data?",
                           paste("We have given you the options of using parameters",
-                                "from two surveys, one using birds and one using otters")
+                                "from two surveys, one using birds and one using otters"),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$ishowpv1, {
     showModal(modalDialog(title = "Between Individual Variation",
                           paste("How different on average is each individual from",
                                 "the other individuals? Higher values indicate more",
-                                "differences between individuals.")
+                                "differences between individuals."),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$ishowpv2, {
     showModal(modalDialog(title = "Average Value per Individual",
                           paste("This is the average value per individual",
-                                "at the starting point of the survey.")
+                                "at the starting point of the survey."),
+                          easyClose = TRUE
     ))
   })
   observeEvent(input$ishowpv3, {
     showModal(modalDialog(title = "Residual Variation",
                           paste("This is the average amount of random variation",
                                 "in the outcome that",
-                                "cannot be explained by the parameters above.")
+                                "cannot be explained by the parameters above."),
+                          easyClose = TRUE
     ))
   })
   
