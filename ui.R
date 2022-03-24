@@ -508,6 +508,52 @@ shinyUI(
 			
 			
 			         )
+			),
+			
+			tabPanel("Extract input parameter values",
+			
+			 fluidPage(
+			 
+							 # App title ----
+				  titlePanel("Extract parameters from data frame"),
+
+				  # Sidebar layout with input and output definitions ----
+				  sidebarLayout(
+
+					# Sidebar panel for inputs ----
+					sidebarPanel(
+
+					h5("Upload a csv file with columns for the response variable of interest (named 'response'), the site identifier (named 'site.id') and a repeat or grouping identifier (named 'rep.id'). For individual based data only the response and rep.id are required."),
+					
+					  # Input: Select a file ----
+					  fileInput("file1", "Choose CSV File",
+								multiple = FALSE,
+								accept = c("text/csv",
+										 "text/comma-separated-values,text/plain",
+										 ".csv")),
+
+					  # Horizontal line ----
+					  tags$hr(),
+					  
+					  radioButtons("dat_typ", "Type of Data",
+								   choices = c(Site_Based = "site",
+											   Individual_Based = "ind"),
+								   selected = "site")
+
+					  ),
+
+					# Main panel for displaying outputs ----
+					mainPanel(
+
+					  # Output: Data file ----
+					  tableOutput("estparams")
+
+					)
+
+				  )
+							 
+			 )
+			
 			)
 			
     )

@@ -78,6 +78,55 @@ probit=function(x){exp(x)/(1+exp(x))}
 invlogit <- function(x){1/(1+exp(-x))}
 
 
+extract.param <- function(dat){
+	
+	if(!is.element(c("response","site.id","rep.id"),names(dat))){
+	
+		stop("The uploaded data frame must have columns representing 'response','site.id' and 'rep.id' ")
+	
+	}else{
+
+		mod=lmer(response ~ 1 + 1|site.id/rep.id,data=dat)
+
+		out = c(summary(mod)$coefficients[1,1] , data.frame(summary(mod)$varcor)[,5] )
+
+		out = out[c(3,1,2,4)]
+
+		names(out)=c("Between site variation","Average site values","Between replicate variation","Residual Variation")
+		out <- data.frame(Parameter=names(out),Values=out)
+
+		return(out)
+	
+	}
+}
+
+
+
+extract.param.ind <- function(dat){
+
+	if(!is.element(c("response","rep.id"),names(dat))){
+	
+		stop("The uploaded data frame must have columns representing 'response' and 'rep.id' ")
+	
+	}else{
+
+		mod=lmer(response ~ 1 + 1|rep.id,data=dat)
+
+		out = c(summary(mod)$coefficients[1,1] , data.frame(summary(mod)$varcor)[,5] )
+
+		out = out[c(2,1,3)]
+
+		names(out)=c("Between_individual_variation","Average_value_per_individual","Residual Variation")
+
+		out <- data.frame(Parameter=names(out),Values=out)
+
+		return(out)
+	
+	}
+
+}
+
+
 ## all code sits within a function of inputs and outputs 
 function(input, output, session) {
   
@@ -1760,36 +1809,36 @@ function(input, output, session) {
           column(9,
                  numericInput('var1', 'Between Site Variation', 
                               switch(input$presets,
-                                     "fish" = 1.5,
+                                     "fish" = 0.94,
                                      "honey" = 0.15,
-                                     "lead" = 2),
+                                     "lead" = 1.13),
                               min=1,max=20,step=0.1)),
           column(3, actionButton("showpv1","",icon=icon("info")))),
         fluidRow(
           column(9,
                  numericInput('var2', 'Average Site values',
                               switch(input$presets,
-                                     "fish"=1,
+                                     "fish"=-4.00,
                                      "honey" = 0.16,
-                                     "lead" = 1.23),
+                                     "lead" = -2.87),
                               min=1,max=20,step=0.1)),
           column(3,actionButton("showpv2","",icon=icon("info")))),
         fluidRow(
           column(9,
                  numericInput('var3', 'Between replicate variation', 
                               switch(input$presets,
-                                     "fish" = 0.25,
+                                     "fish" = 0.55,
                                      "honey" = 0.34,
-                                     "lead" = 0.35),
+                                     "lead" = 0.53),
                               min=1,max=20,step=0.1)),
           column(3,actionButton("showpv3","",icon=icon("info")))),
         fluidRow(
           column(9,
                  numericInput('var4', 'Residual Variation', 
                               switch(input$presets,
-                                     "fish" = 0.5,
+                                     "fish" = 0.44,
                                      "honey" = 0,
-                                     "lead" = 0.8),
+                                     "lead" = 0.62),
                               min=1,max=20,step=0.1)),
           column(3,actionButton("showpv4","",icon=icon("info"))))
     )
@@ -1809,13 +1858,13 @@ function(input, output, session) {
     )
     outpar <- list()
     if(input$presets=='fish'){
-      outpar$var1=1.5 ; outpar$var2=1 ; outpar$var3=0.25 ; outpar$var4=0.5 ;
+      outpar$var1=0.94 ; outpar$var2=-4.00 ; outpar$var3=0.55 ; outpar$var4=0.44 ;
     }else{
       if(input$presets=='honey'){
         outpar$var1=0.15 ; outpar$var2=0.16 ; outpar$var3=0.34 ; outpar$var4=0 ;
       }else{
         if(input$presets=='lead'){
-          outpar$var1=2 ; outpar$var2=1.23 ; outpar$var3=0.35 ; outpar$var4=0.8 ;
+          outpar$var1=0.45 ; outpar$var2=-2.87 ; outpar$var3=0.53 ; outpar$var4=0.62 ;
         }
       }
     }
@@ -1837,10 +1886,10 @@ function(input, output, session) {
     )
     outparind <- list()
     if(input$presetind=='bird'){
-      outparind$var1=0.2 ; outparind$var2=0.5 ; outparind$var3=0.8 ; 
+      outparind$var1=0.45 ; outparind$var2=5.13 ; outparind$var3=1.34 ; 
     }else{
       if(input$presetind=='otters'){
-        outparind$var1=0.2; outparind$var2=0.5; outparind$var3=0.8 ; 
+        outparind$var1=0.16; outparind$var2=2.93; outparind$var3=1.02 ; 
       }
     }
     if(input$param_specind=='val'){
@@ -1862,26 +1911,51 @@ function(input, output, session) {
           column(9,
                  numericInput('var1ind', 'Between Individual Variation',
                               switch(input$presetind,
-                                     "bird" = 0.2,
-                                     "otters" = 0.2),min=0.1,max=1.5,step=0.1)),
+                                     "bird" = 0.45,
+                                     "otters" = 0.16),min=0.1,max=1.5,step=0.1)),
           column(3, actionButton("ishowpv1","",icon=icon("info")))),
         fluidRow(
           column(9,
                  numericInput('var2ind', 'Average value per individual',
                               switch(input$presetind,
-                                     "bird" = 0.5,
-                                     "otters" = 0.5),min=0.01,max=10,step=0.1)),
+                                     "bird" = 5.13,
+                                     "otters" = 2.93),min=0.01,max=10,step=0.1)),
           column(3, actionButton("ishowpv2","",icon=icon("info")))),
         fluidRow(
           column(9,
                  numericInput('var3ind', 'Residual Variation', 
                               switch(input$presetind,
-                                     "bird" = 0.8,
-                                     "otters" = 0.8),min=0.1,max=2,step=0.1)),
+                                     "bird" = 1.34,
+                                     "otters" = 1.02),min=0.1,max=2,step=0.1)),
           column(3,actionButton("ishowpv3","",icon=icon("info"))))
     )
     
   })
+  
+  output$estparams <- renderTable({
+
+		req(input$file1)
+
+		tryCatch(
+		  {
+			df <- read.csv(input$file1$datapath)
+		  },
+		  error = function(e) {
+			# return a safeError if a parsing error occurs
+			stop(safeError(e))
+		  }
+		)
+
+		if(input$dat_typ=="site"){
+			dto = extract.param(df)
+		}else{
+			dto = extract.param.ind(df)
+		}
+
+		return(dto)
+
+
+	})
   
   observeEvent(input$show, {
     showModal(modalDialog(title = "Set scenario",
