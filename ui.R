@@ -27,7 +27,32 @@ shinyUI(
                tabPanel("Introduction",
                         h3("Power Analysis Tool"),
                         
-                        h5(paste("This tool is designed to be used to simulate",
+						
+									h5(paste("Managing exposure to chemicals is one of the important goals in the UK government’s 25 Year Environment Plan.", 
+											"As part of understanding progress towards that goal, an indicator on exposure and adverse effects of chemicals", 
+											"on wildlife in the environment (H4) has been developed. This indicator is part of the 25 Year Environment Plan", 
+											"outcome indicator framework.")),
+								
+								
+									h5("The H4 indicator, which uses a dashboard approach (the interim version of which is shown below), considers ‘the exposure and adverse effects of chemicals on", 
+											"wildlife’ to help measure progress against commitments in the UK Government 25-Year Environment Plan (25-YEP).", 
+											"It comprises a range of different datasets covering various chemical and media/species combinations."),
+								
+								
+									img(src="dashboard.png",height=300,width=400),
+									img(src="dashboard_key.png",height=300,width=400),
+
+								
+									h5(paste("The importance of understanding the power of the metrics presented within the H4 indicator to show", 
+											"change over time, particularly within the lifetime of the 25-YEP, has been raised through the trial of the", 
+											"indicator approach  and its independent review by the Hazardous Substances Advisory Committee and the Expert", 
+											"Committee on Pesticides. There is a need to be confident that the data will provide enough information to show", 
+											"change over time in response to action. This is particularly important for substances such as persistent,", 
+											"bioaccumulative and toxic substances that may be slow to respond to action, and are still present in the", 
+											"environment as legacy contaminants.")),
+
+
+                        h4(strong(paste("This tool is designed to be used to simulate",
                                  "data under different survey designs and expected",
                                  "change scenarios and then use this to calculate",
                                  "the expected power of the specified survey design",
@@ -36,8 +61,11 @@ shinyUI(
                                  "see the Explanation tab, for a worked example",
                                  "see the Example tab or to get started on using",
                                  "the app go to either the Site-based Data",
-                                 "tab or the Data from Individuals tab."))
+                                 "tab or the Data from Individuals tab.")))
                         ),
+						
+						
+						     
                
                tabPanel("Explanation", 
                         
@@ -187,7 +215,7 @@ shinyUI(
 			           headerPanel(''),
 			           sidebarPanel(
 			             
-			             h1("Define Scenario"),
+			             h1("Define Monitoring Design"),
 			             br(),
 			             #actionButton("show", "",icon = icon("info")), 
 			             uiOutput('resetable_input'),
@@ -220,9 +248,9 @@ shinyUI(
 			                                column(9,
 			                                       radioButtons("presets", 
 			                                           "Parameterise according to what data", 
-			                                           choices=list("Marine Fish"="fish",
-			                                                        "Honey Monitoring"="honey",
-			                                                        "EA Lead"="lead"), 
+			                                           choices=list("PBDEs in marine fish livers"="fish",
+			                                                        "Clothianidein residues in Honey"="honey",
+			                                                        "Bioavailable lead concentrations in water"="lead"), 
 			                                           selected = NULL)),
 			                                column(3, actionButton("showp3","", 
 			                                                       icon=icon("info"))))
@@ -265,7 +293,7 @@ shinyUI(
 			           headerPanel(''),
 			           sidebarPanel(
 			             
-			             h1("Define Scenario"),
+			             h1("Define Monitoring Design"),
 			             uiOutput('resinputind'),
 			             
 			             actionButton("updateind", "Update Analysis"),
@@ -291,8 +319,8 @@ shinyUI(
 			                                column(9,
 			                                       radioButtons("presetind", 
 			                                                    "Parameterise according to what data", 
-			                                                    choices=list("Birds"="bird",
-			                                                                 "Otters"="otters"), 
+			                                                    choices=list("SGARs in Red Kite Livers"="bird",
+			                                                                 "PCBs in Otter Livers"="otters"), 
 			                                                    selected = NULL)),
 			                                column(3, actionButton("ishowp2","",icon=icon("info"))))
 			             )

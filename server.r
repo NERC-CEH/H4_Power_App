@@ -2150,13 +2150,37 @@ function(input, output, session) {
   observeEvent(input$showp3, {
     showModal(modalDialog(title = "Parameterise according to what data?",
                           HTML(paste("We have given you the options of using parameters",
-                                "from three surveys, the Marine Fish survey,",
+                                "from three surveys, the survey of PBDEs in marine fish livers conducted by CEFAS,",
                                 "the <a href = 'https://honey-monitoring.ac.uk/'>Honey Monitoring Scheme</a>, and",
-                                "the EA lead scheme.",
-                                "The honey monitoring scheme parameters are",
-                                "appropriate for use with binary data, the",
+                                "the EA freshwater monitoring of bioavailable lead concentrations.",
+											"<br>",
+											"<br>",
+											"Data on bioavailable lead concentrations in water have been provided by the Environment Agency", 
+											"from their freshwater statutory monitoring network. The data vary both in terms of the number", 
+											"of measurements taken within a year per site and the number of sites monitored per year.", 
+											"Some sites have been sampled in multiple years.",
+											"<br>",
+											"<br>",
+                                "Data on the residue concentrations of Clothianidin in honey from between 2014 and 2017",
+												"were taken from the honey monitoring scheme. Data were converted into a binary indicator reflecting",
+												"whether a trheshold of 0.5 ng g-1 had been exceeded. The question of interest was therefore the power", 
+												"to detect a change in the proportion of samples with residues over this limit.", 
+												"The honey monitoring scheme parameters are",
+                                "therefore appropriate for use with binary data, the",
                                 "others are appropriate for use with continuous",
-                                "data.")),
+                                "data.",
+											"<br>",
+											"<br>",
+											"Data on concentrations of polybrominated diphenyl ethers (PBDEs) in marine fish livers",
+											", namely the dab (Limanda limanda), are collected as part of MSFD–OSPAR monitoring for", 
+											"assessing good environmental status. The data are collected and held by Cefas and more information is available",
+											"<a href = 'https://moat.cefas.co.uk/pressures-from-human-activities/contaminants/pbdes-in-biota/'> here. </a>",
+											"Data was provided for 2008–2019 covering 25 stations, although monitoring at one of these", 
+											"was only conducted in 2014. Between 2008 and 2010, sampling around the country was done annually", 
+											"and covered 16–20 stations each year.",
+											"From 2011 onwards, fish were collected at east and west coast stations on alternate years.", 
+											"For these years, there are data for 12–15 east coast stations (odd years) and 8–9 west coast ones (even years)."
+								)),
                           easyClose = TRUE
     ))
   })
@@ -2346,8 +2370,22 @@ function(input, output, session) {
   })
   observeEvent(input$ishowp2, {
     showModal(modalDialog(title = "Parameterise according to what data?",
-                          paste("We have given you the options of using parameters",
-                                "from two surveys, one using birds and one using otters"),
+                          HTML(paste("We have given you the options of using parameters",
+                                "from two surveys, one using birds and one using otters",
+											"<br>",
+											"<br>",
+											"Data on second generation anticoagulant rodenticides (SGARs) in red kite livers", 
+											"have been provided by UKCEH and Fera Science Ltd as part of the predatory bird monitoring scheme (PBMS)", 
+											"and Wildlife Incident Investigation Scheme (WIIS). The data consist of measured concentrations of", 
+											"the SGARs brodifacoum, bromadiolone, difenacoum, difethialone, and flocoumafen in the livers of a", 
+											"variable number of red kites found dead each year in England. Summed SGAR concentrations represent", 
+											"the summed concentrations of these 5 compounds.",
+											"<br>",
+											"<br>",
+											"Data on polychlorinated biphenyls (PCBs)PBDEs in otter livers have been provided by the CUOP", 
+											"(Cardiff University, 2020). Livers have been collected from individuals found dead each year.", 
+											"Most animals died as a result of traffic collisions but some individuals may have died from other causes."
+								)),
                           easyClose = TRUE
     ))
   })
