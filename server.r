@@ -1523,6 +1523,7 @@ function(input, output, session) {
   #boxplot of simulated data under the individual observation scenarios
   output$indplot <- renderPlotly({
     # if(check.input.ind()[[1]]<=1 & check.input.ind()[[2]]==""){
+    if(!is.null(input$histind)){
     if(input$histind & input$hist.yrind>0){
       ggplotly(ggplot(simdata.ind(), aes(x = year, y = response)) +
                  geom_jitter(height = 0, width = 0.1, colour = "grey") +
@@ -1557,7 +1558,7 @@ function(input, output, session) {
     #       )
     #     )
     # }
-    
+    }
   })
   
   #plot of multiple effect scenarios for individual observation data 
